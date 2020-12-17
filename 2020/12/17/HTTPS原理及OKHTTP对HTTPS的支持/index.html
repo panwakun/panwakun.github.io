@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  
+  <title>HTTPS原理及OKHTTP对HTTPS的支持 | Hexo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="HTTPS原理我们先看一下定义，来自wikipedia的一个介绍：  HTTPS  (also called HTTP over Transport Layer Security (TLS), HTTP over SSL, and HTTP Secure) is a communications protocol for secure communication over a computer n">
+<meta property="og:type" content="article">
+<meta property="og:title" content="HTTPS原理及OKHTTP对HTTPS的支持">
+<meta property="og:url" content="http://example.com/2020/12/17/HTTPS%E5%8E%9F%E7%90%86%E5%8F%8AOKHTTP%E5%AF%B9HTTPS%E7%9A%84%E6%94%AF%E6%8C%81/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="HTTPS原理我们先看一下定义，来自wikipedia的一个介绍：  HTTPS  (also called HTTP over Transport Layer Security (TLS), HTTP over SSL, and HTTP Secure) is a communications protocol for secure communication over a computer n">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://user-gold-cdn.xitu.io/2018/8/29/165847743f0f043d?w=640&h=553&f=png&s=179339">
+<meta property="og:image" content="https://user-gold-cdn.xitu.io/2018/8/29/165847743f2d37c1?w=882&h=867&f=png&s=169255">
+<meta property="article:published_time" content="2020-12-17T14:06:52.000Z">
+<meta property="article:modified_time" content="2020-12-17T14:08:02.156Z">
+<meta property="article:author" content="John Doe">
+<meta property="article:tag" content="Android">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://user-gold-cdn.xitu.io/2018/8/29/165847743f0f043d?w=640&h=553&f=png&s=179339">
+  
+    <link rel="alternate" href="/atom.xml" title="Hexo" type="application/atom+xml">
+  
+  
+    <link rel="shortcut icon" href="/favicon.png">
+  
+  
+    
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/typeface-source-code-pro@0.0.71/index.min.css">
+
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+    
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+<meta name="generator" content="Hexo 5.3.0"></head>
+
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">Hexo</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+          <a id="nav-rss-link" class="nav-icon" href="/atom.xml" title="RSS Feed"></a>
+        
+        <a id="nav-search-btn" class="nav-icon" title="Search"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="http://example.com"></form>
+      </div>
+    </div>
+  </div>
+</header>
+
+      <div class="outer">
+        <section id="main"><article id="post-HTTPS原理及OKHTTP对HTTPS的支持" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+  <div class="article-meta">
+    <a href="/2020/12/17/HTTPS%E5%8E%9F%E7%90%86%E5%8F%8AOKHTTP%E5%AF%B9HTTPS%E7%9A%84%E6%94%AF%E6%8C%81/" class="article-date">
+  <time class="dt-published" datetime="2020-12-17T14:06:52.000Z" itemprop="datePublished">2020-12-17</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="p-name article-title" itemprop="headline name">
+      HTTPS原理及OKHTTP对HTTPS的支持
+    </h1>
+  
+
+      </header>
+    
+    <div class="e-content article-entry" itemprop="articleBody">
+      
+        <h1 id="HTTPS原理"><a href="#HTTPS原理" class="headerlink" title="HTTPS原理"></a>HTTPS原理</h1><p>我们先看一下定义，来自wikipedia的一个介绍：</p>
+<blockquote>
+<p>HTTPS  (also called <strong>HTTP over Transport Layer Security (TLS)</strong>, <strong>HTTP over SSL</strong>, and <strong>HTTP Secure</strong>) is a communications protocol for secure communication over a computer network which is widely used on the Internet. HTTPS consists of communication over Hypertext Transfer Protocol (HTTP) within a connection encrypted by Transport Layer Security, or its predecessor, Secure Sockets Layer. The main motivation for HTTPS is authentication of the visited website and protection of the privacy and integrity of the exchanged data.</p>
+</blockquote>
+<p>从这个定义中我们可以看出，HTTPS是包含了HTTP协议及SSL /TLS协议这两部分内容，简单的理解就是基于SSL/TLS进行HTTP的加密传输。HTTP是一个应用层的协议，定义了很多请求和响应方通信的遵循的规则，这部分内容可以从<a target="_blank" rel="noopener" href="https://www.amazon.cn/HTTP%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97-%E5%90%89%E5%B0%94%E5%88%A9/dp/B008XFDQ14/ref=sr_1_1/460-1292118-1495910?s=books&ie=UTF8&qid=1502806302&sr=1-1&keywords=HTTP%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97">HTTP权威指南</a>这部巨作中得到很详细的介绍，这里就不赘述了。其实主要还是想探讨一下SSL/TLS协议的一些具体细节，毕竟这是HTTPS区别于HTTP最大的地方，首先我们来看一下一个SSL/TLS完整的握手过程。</p>
+<p><img src="https://user-gold-cdn.xitu.io/2018/8/29/165847743f0f043d?w=640&h=553&f=png&s=179339" alt="SSL/TLS握手过程"></p>
+<p>很复杂的交互过程，但是理解下来就是用非对称加密的手段传递密钥，然后用密钥进行对称加密传递数据。在这个握手过程中最重要的就是证书校验，其他就是正常的数据交互过程。如何校验一个证书合法有很大的文章，处理不好就会让你的网络失去了安全性。一个证书的校验，主要包括以下几个方面：</p>
+<ul>
+<li>第一，校验证书是否是由客户端中“受信任的根证书颁发机构”颁发；</li>
+<li>第二，校验证书是否在上级证书的吊销列表；</li>
+<li>第三，校验证书是否过期；</li>
+<li>第四，校验证书域名是否一致。</li>
+</ul>
+<p>一天我们的QA妹子气愤愤的找到我说，为啥别人的APP可以用Charles抓到HTTPS的包，为啥我们的不能，我心中窃喜的告诉她只能说明我们技高一筹了。具体如何做到的后面我会分享一下我们的做法，先讨论一下Charles如何实现https的抓包的，这里面涉及到一个中间人攻击的问题。</p>
+<p>一个针对SSL的中间人攻击过程如下：</p>
+<p><img src="https://user-gold-cdn.xitu.io/2018/8/29/165847743f2d37c1?w=882&h=867&f=png&s=169255" alt="image.png"></p>
+<p>中间人其实是做了一个偷梁换柱的动作，核心是如何欺骗客户端，从而让客户端能够放心的与中间人进行数据交互而没有任何察觉。我们来看Charles如何做到HTTPS抓包的，网上有很多Charles如何抓HTTPS包的教程，几步就搞定了，其中最核心的就是：</p>
+<blockquote>
+<p>将私有CA签发的数字证书安装到手机中并且作为受信任证书保存</p>
+</blockquote>
+<p>自签发一个证书实现上述二、三、四条校验规则很简单，要把这个证书安装到手机端信任列表必须得到用户的许可，这里不好绕过，但是鉴于大部分用户的网络安全意识比较差，有时也会稀里糊涂的信任了，那我们作为APP的开发人员，能否避免这种情况的发生呢？</p>
+<p>其实也很简单，我们把服务端的证书内置在我们的APP里，我们在做服务端证书校验的时候只比对是否和这个证书完全相同，不同就直接抛错，那中间人便没有办法绕过证书进行攻击。但是这里面也有一个问题就是服务端的证书可能会过期或者升级，而且服务端往往为了提高网络的安全性，证书的有效时间不会设置太长，这样APP就会因为这个证书的事情频繁发版，也很痛苦。（前段时间我司IOS的APP就是因为授权企业用户的证书没有及时更新，导致大家无法正常打开APP，血的教训导致我们不想重走这条路）可能你又想到了，我们可以把证书配置在后端，有更新的时候直接去下载不就完了，那我们的证书下载没有没拦截的风险吗，一旦拦截，我们所有的证书校验都会失效，比直接信任手机内置的证书更可怕。我们既不想只信任我们服务器的证书，又不想信任手机上所有的 CA 证书。有个不错的的信任方式是把签发我们服务器的证书的根证书导出打包到APP中，这样虽然不能做到百分之百的证书无漏洞，但是相比于信任手机中几百个证书，我们只信任一个风险会小很多，这也就是我们的QA妹子用Charles抓不了我们的包的原因。~~~</p>
+<h1 id="OKHTTP"><a href="#OKHTTP" class="headerlink" title="OKHTTP"></a>OKHTTP</h1><p>作为一个Android开发者，我们来看一下广泛使用的网络库OKHTTP对于HTTPS的支持。下面这段话摘自OKHTTP对于HTTPS的介绍中（<a target="_blank" rel="noopener" href="https://github.com/square/okhttp/wiki/HTTPS">地址请戳</a>）：</p>
+<p>OkHttp attempts to balance two competing concerns:</p>
+<ul>
+<li><strong>Connectivity</strong> to as many hosts as possible. That includes advanced hosts that run the latest versions of <a target="_blank" rel="noopener" href="https://boringssl.googlesource.com/boringssl/">boringssl</a> and less out of date hosts running older versions of <a target="_blank" rel="noopener" href="https://www.openssl.org/">OpenSSL</a>.</li>
+<li><strong>Security</strong> of the connection. This includes verification of the remote webserver with certificates and the privacy of data exchanged with strong ciphers.</li>
+</ul>
+<p>几个与HTTPS相关的API：</p>
+<h3 id="SSLSocketFactory"><a href="#SSLSocketFactory" class="headerlink" title="SSLSocketFactory:"></a>SSLSocketFactory:</h3><p>安全套接层工厂，用于创建SSLSocket。默认的SSLSocket是信任手机内置信任的证书列表，我们可以通过OKHttpClient.Builder的sslSocketFactory方法定义我们自己的信任策略，比如实现上面提到的我们只信任服务端证书的根证书，代码实现如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;**</span><br><span class="line">     * 载入证书</span><br><span class="line">     *&#x2F;</span><br><span class="line">    public static SSLSocketFactory getSSLSocketFactory(InputStream... certificates) &#123;</span><br><span class="line">        try &#123;</span><br><span class="line">&#x2F;&#x2F;用我们的证书创建一个keystore</span><br><span class="line">            CertificateFactory certificateFactory &#x3D; CertificateFactory.getInstance(&quot;X.509&quot;);</span><br><span class="line">            KeyStore keyStore &#x3D; KeyStore.getInstance(KeyStore.getDefaultType());</span><br><span class="line">            keyStore.load(null);</span><br><span class="line">            int index &#x3D; 0;</span><br><span class="line">            for (InputStream certificate : certificates) &#123;</span><br><span class="line">                String certificateAlias &#x3D; &quot;server&quot;+Integer.toString(index++);</span><br><span class="line">                keyStore.setCertificateEntry(certificateAlias, certificateFactory.generateCertificate(certificate));</span><br><span class="line">                try &#123;</span><br><span class="line">                    if (certificate !&#x3D; null) &#123;</span><br><span class="line">                        certificate.close();</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125; catch (IOException e) &#123;</span><br><span class="line">                    e.printStackTrace();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">&#x2F;&#x2F;创建一个trustmanager，只信任我们创建的keystore</span><br><span class="line">            SSLContext sslContext &#x3D; SSLContext.getInstance(&quot;TLS&quot;);</span><br><span class="line">            TrustManagerFactory trustManagerFactory &#x3D;</span><br><span class="line">                    TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());</span><br><span class="line">            trustManagerFactory.init(keyStore);</span><br><span class="line">            sslContext.init(</span><br><span class="line">                    null,</span><br><span class="line">                    trustManagerFactory.getTrustManagers(),</span><br><span class="line">                    new SecureRandom()</span><br><span class="line">            );</span><br><span class="line">            return sslContext.getSocketFactory();</span><br><span class="line">        &#125; catch (Exception e) &#123;</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">            return null;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<h3 id="X509TrustManager"><a href="#X509TrustManager" class="headerlink" title="X509TrustManager:"></a>X509TrustManager:</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">public interface X509TrustManager extends TrustManager &#123;</span><br><span class="line">    void checkClientTrusted(X509Certificate[] var1, String var2) throws CertificateException;</span><br><span class="line"></span><br><span class="line">    void checkServerTrusted(X509Certificate[] var1, String var2) throws CertificateException;</span><br><span class="line"></span><br><span class="line">    X509Certificate[] getAcceptedIssuers();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>checkServerTrusted方式实现了对于服务端校验，这里一般使用系统默认的实现，有些教程讲到这样配置ssl</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">private static synchronized SSLSocketFactory getDefaultSSLSocketFactory() &#123;</span><br><span class="line">    try &#123;</span><br><span class="line">        SSLContext sslContext &#x3D; SSLContext.getInstance(&quot;TLS&quot;);</span><br><span class="line">        sslContext.init(null, new TrustManager[]&#123;</span><br><span class="line">                new X509TrustManager() &#123;</span><br><span class="line">                    public void checkClientTrusted(X509Certificate[] x509Certificates, String s) throws CertificateException &#123;</span><br><span class="line"></span><br><span class="line">                    &#125;</span><br><span class="line"></span><br><span class="line">                    public void checkServerTrusted(X509Certificate[] x509Certificates, String s) throws CertificateException &#123;</span><br><span class="line">                    &#125;</span><br><span class="line"></span><br><span class="line">                    public X509Certificate[] getAcceptedIssuers() &#123;</span><br><span class="line">                        return new X509Certificate[0];</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">        &#125;, null);</span><br><span class="line">        return sslContext.getSocketFactory();</span><br><span class="line">    &#125; catch (GeneralSecurityException e) &#123;</span><br><span class="line">        throw new AssertionError();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>千万不能这么做，这样将你是没有做任何校验的，这里推荐使用系统默认的，他会在校验过程中发现有异常直接抛出。</p>
+<h3 id="HostnameVerifier"><a href="#HostnameVerifier" class="headerlink" title="HostnameVerifier:"></a>HostnameVerifier:</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">public interface HostnameVerifier &#123;</span><br><span class="line">    boolean verify(String var1, SSLSession var2);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这个接口主要实现对于域名的校验，OKHTTP实现了一个OkHostnameVerifier，对于证书中的IP及Host做了各种正则匹配，默认情况下使用的是这个策略。有时你遇到了一些奇怪的校验问题，大部分教程会教你这样：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">OKHttpClient.Builder.hostnameVerifier(new HostnameVerifier() &#123;</span><br><span class="line">                    @Override</span><br><span class="line">                    public boolean verify(String hostname, SSLSession session) &#123;</span><br><span class="line">                        return true;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;)</span><br></pre></td></tr></table></figure>
+<p>其实这样你是完全放弃了hostname的校验，这也是相当不安全的。</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://example.com/2020/12/17/HTTPS%E5%8E%9F%E7%90%86%E5%8F%8AOKHTTP%E5%AF%B9HTTPS%E7%9A%84%E6%94%AF%E6%8C%81/" data-id="ckisxhque00003tjd4eev04iy" data-title="HTTPS原理及OKHTTP对HTTPS的支持" class="article-share-link">Share</a>
+      
+      
+      
+  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Android/" rel="tag">Android</a></li></ul>
+
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+  
+    <a href="/2020/12/17/hello-world/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">Hello World</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tags</h3>
+    <div class="widget">
+      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/Android/" rel="tag">Android</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tag Cloud</h3>
+    <div class="widget tagcloud">
+      <a href="/tags/Android/" style="font-size: 10px;">Android</a>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/12/">December 2020</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recent Posts</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2020/12/17/HTTPS%E5%8E%9F%E7%90%86%E5%8F%8AOKHTTP%E5%AF%B9HTTPS%E7%9A%84%E6%94%AF%E6%8C%81/">HTTPS原理及OKHTTP对HTTPS的支持</a>
+          </li>
+        
+          <li>
+            <a href="/2020/12/17/hello-world/">Hello World</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      
+      &copy; 2020 John Doe<br>
+      Powered by <a href="https://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+
+<script src="/js/jquery-3.4.1.min.js"></script>
+
+
+
+  
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+<script src="/js/script.js"></script>
+
+
+
+
+
+  </div>
+</body>
+</html>
