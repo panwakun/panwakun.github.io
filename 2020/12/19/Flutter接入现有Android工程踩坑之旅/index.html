@@ -1,37 +1,57 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
-
-
-{% block title %}{{ page.title }} | {{ config.title }}{% endblock %}
-
-{% block page_class %}page-post-detail{% endblock %}
-
-
-{% block content %}
-
-  <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
-
-    <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
-    </div>
-  </div>
-
-{% endblock %}
-
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
-
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"><title>Flutter接入现有Android工程踩坑之旅 - Hexo</title><link rel="manifest" href="/manifest.json"><meta name="application-name" content="Hexo"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Hexo"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta description="把Flutter作为一个模块接入到现有的Android工程，Flutter有官方推荐方案 Add Flutter to existing apps,通过这样的工程配置，可以在debug支持HotReload，也可以输出Release包供发布。不过在使用过程中有一些需要调整的地方，特此记录希望对大家能有借鉴意义。 工程目录调整 flutter create -t module  命令会创建一个支持F"><meta property="og:type" content="article"><meta property="og:title" content="Flutter接入现有Android工程踩坑之旅"><meta property="og:url" content="http://example.com/2020/12/19/Flutter%E6%8E%A5%E5%85%A5%E7%8E%B0%E6%9C%89Android%E5%B7%A5%E7%A8%8B%E8%B8%A9%E5%9D%91%E4%B9%8B%E6%97%85/"><meta property="og:site_name" content="Hexo"><meta property="og:description" content="把Flutter作为一个模块接入到现有的Android工程，Flutter有官方推荐方案 Add Flutter to existing apps,通过这样的工程配置，可以在debug支持HotReload，也可以输出Release包供发布。不过在使用过程中有一些需要调整的地方，特此记录希望对大家能有借鉴意义。 工程目录调整 flutter create -t module  命令会创建一个支持F"><meta property="og:locale" content="en_US"><meta property="og:image" content="http://example.com/img/og_image.png"><meta property="article:published_time" content="2020-12-19T11:02:48.000Z"><meta property="article:modified_time" content="2020-12-19T11:04:39.233Z"><meta property="article:author" content="John Doe"><meta property="article:tag" content="Flutter"><meta property="twitter:card" content="summary"><meta property="twitter:image" content="/img/og_image.png"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","mainEntityOfPage":{"@type":"WebPage","@id":"http://example.com/2020/12/19/Flutter%E6%8E%A5%E5%85%A5%E7%8E%B0%E6%9C%89Android%E5%B7%A5%E7%A8%8B%E8%B8%A9%E5%9D%91%E4%B9%8B%E6%97%85/"},"headline":"Hexo","image":["http://example.com/img/og_image.png"],"datePublished":"2020-12-19T11:02:48.000Z","dateModified":"2020-12-19T11:04:39.233Z","author":{"@type":"Person","name":"John Doe"},"description":"把Flutter作为一个模块接入到现有的Android工程，Flutter有官方推荐方案 Add Flutter to existing apps,通过这样的工程配置，可以在debug支持HotReload，也可以输出Release包供发布。不过在使用过程中有一些需要调整的地方，特此记录希望对大家能有借鉴意义。 工程目录调整 flutter create -t module  命令会创建一个支持F"}</script><link rel="canonical" href="http://example.com/2020/12/19/Flutter%E6%8E%A5%E5%85%A5%E7%8E%B0%E6%9C%89Android%E5%B7%A5%E7%A8%8B%E8%B8%A9%E5%9D%91%E4%B9%8B%E6%97%85/"><link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.12.0/css/all.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@9.12.0/styles/atom-one-light.css"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;600&amp;family=Source+Code+Pro"><link rel="stylesheet" href="/css/default.css"><!--!--><meta name="generator" content="Hexo 5.3.0"></head><body class="is-1-column"><nav class="navbar navbar-main"><div class="container"><div class="navbar-brand justify-content-center"><a class="navbar-item navbar-logo" href="/">Hexo</a></div><div class="navbar-menu"><div class="navbar-end"></div></div></div></nav><section class="section"><div class="container"><div class="columns"><div class="column order-2 column-main is-12"><div class="card"><article class="card-content article" role="article"><div class="article-meta is-size-7 is-uppercase level is-mobile"><div class="level-left"><span class="level-item">Posted&nbsp;<time dateTime="2020-12-19T11:02:48.000Z" title="2020-12-19T11:02:48.000Z">2020-12-19</time></span><span class="level-item">Updated&nbsp;<time dateTime="2020-12-19T11:04:39.233Z" title="2020-12-19T11:04:39.233Z">2020-12-19</time></span></div></div><h1 class="title is-3 is-size-4-mobile">Flutter接入现有Android工程踩坑之旅</h1><div class="content"><p>把Flutter作为一个模块接入到现有的Android工程，Flutter有官方推荐方案 <a target="_blank" rel="noopener" href="https://github.com/flutter/flutter/wiki/Add-Flutter-to-existing-apps#preview-use-the-flutter-module-template">Add Flutter to existing apps</a>,通过这样的工程配置，可以在debug支持HotReload，也可以输出Release包供发布。不过在使用过程中有一些需要调整的地方，特此记录希望对大家能有借鉴意义。</p>
+<h3 id="工程目录调整"><a href="#工程目录调整" class="headerlink" title="工程目录调整"></a>工程目录调整</h3><blockquote>
+<p>flutter create -t module</p>
+</blockquote>
+<p>命令会创建一个支持Flutter的Android Library，其中Android Library的目录位于Flutter工程的隐藏目录    <strong>.android/flutter</strong>      中, 一般情况下，我们会把Flutter代码和Android代码放在两个git仓库，通过submodule的方式进行依赖，可以把这个Library的代码copy到你的工程目录下，同时修改flutter的资源目录到你自己的相对路径下：</p>
+<blockquote>
+<p>flutter {<br>source ‘ <strong>your own flutter project directory</strong> ‘<br>}</p>
+</blockquote>
+<p>另外需要Copy <strong>include_flutter.groovy</strong> 这个文件到你的工程目录下，修改相应的目录添加对于Library的依赖。</p>
+<h3 id="armeabi支持"><a href="#armeabi支持" class="headerlink" title="armeabi支持"></a>armeabi支持</h3><p>Flutter官方只提供了四种CPU架构的SO库：armeabi-v7a、arm64-v8a、x86和x86-64。但是目前我们对接的两个项目组分别是只支持armeabi和只支持armeabi-v7a，所以需要对官方的jar包进行改造。官方SDK提供的jar包路径在  <em>$flutterRoot/bin/cache/artifacts/engine</em>中,复制这几个目录下的armeabi-v7a中的so到armeabi路径下：</p>
+<ul>
+<li>android-arm</li>
+<li>android-arm-dynamic-profile</li>
+<li>android-arm-dynamic-release</li>
+<li>android-arm-profile</li>
+<li>android-arm-release</li>
+</ul>
+<p>可以通过如下脚本实现：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">unzip flutter.jar lib&#x2F;armeabi-v7a&#x2F;libflutter.so</span><br><span class="line">mkdir lib&#x2F;armeabi</span><br><span class="line">cp lib&#x2F;armeabi-v7a&#x2F;libflutter.so lib&#x2F;armeabi&#x2F;libflutter.so</span><br><span class="line">zip flutter.jar lib&#x2F;armeabi-v7a&#x2F;libflutter.so lib&#x2F;armeabi&#x2F;libflutter.so</span><br></pre></td></tr></table></figure>
+<p>Library中的build.gradle中有一段是通过本地的一个gradle文件添加flutter.jar的依赖：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">apply from: &quot;$flutterRoot&#x2F;packages&#x2F;flutter_tools&#x2F;gradle&#x2F;flutter.gradle&quot;</span><br></pre></td></tr></table></figure>
+<p>我们把flutter.gradle文件以及我们刚才处理的flutter.jar文件Copy到自己的工程路径下，我自己的工程路径配置如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">project</span><br><span class="line">│   app</span><br><span class="line">└───flutter</span><br><span class="line">│   │   build.gradle</span><br><span class="line">│   │   flutter.gradle</span><br><span class="line">│   │   include_flutter.groovy</span><br><span class="line">│   └───flutter-jars</span><br><span class="line">│       └───android-arm</span><br><span class="line">|              |   flutter.jar</span><br><span class="line">│       └───android-arm-dynamic-profile</span><br><span class="line">|              |   flutter.jar</span><br><span class="line">│       └───android-arm-dynamic-release</span><br><span class="line">|              |   flutter.jar</span><br><span class="line">|       └───android-arm-profile</span><br><span class="line">|              |   flutter.jar</span><br><span class="line">|       └───aandroid-arm-release</span><br><span class="line">|              |   flutter.jar</span><br><span class="line">│   settings.gradle</span><br></pre></td></tr></table></figure>
+<p>将flutter.gradle 中jar文件的路径改为本地工程：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">debugFlutterJar &#x3D; new File(&#39;flutter-jars&#x2F;debug&#x2F;flutter.jar&#39;)</span><br><span class="line">profileFlutterJar &#x3D; new File(&#39;flutter-jars&#x2F;profile&#x2F;flutter.jar&#39;)</span><br><span class="line">releaseFlutterJar &#x3D; new File(&#39;flutter-jars&#x2F;release&#x2F;flutter.jar&#39;)</span><br><span class="line">dynamicProfileFlutterJar &#x3D; new File(&#39;flutter-jars&#x2F;dynamicProfile&#x2F;flutter.jar&#39;)</span><br><span class="line">dynamicReleaseFlutterJar &#x3D; new File(&#39;flutter-jars&#x2F;dynamicRelease&#x2F;flutter.jar&#39;)</span><br></pre></td></tr></table></figure>
+<p>这样打出的AAR就能同时支持两种架构。</p>
+<h3 id="打包AAR问题"><a href="#打包AAR问题" class="headerlink" title="打包AAR问题"></a>打包AAR问题</h3><p>按照上面的配置，可以在工程中打出支持Debug HotReload和Release的包，不过在输出AAR给别的业务模块使用时会报一个崩溃：</p>
+<blockquote>
+<p>must be able to initialize the ICU context.</p>
+</blockquote>
+<p>这是Android Gradle Plugin 3.+ 版本的一个bug，它会丢弃flutter.jar 中的 /assets/flutter_shared/icudtl.dat文件到AAR中，导致运行时找不到这个文件崩溃，在2.+版本中发现没有这个问题，所以需要使用Android Gradle Plugin 2.+版本，我这边测试2.2.3版本是ok的。但是Android Gradle 2的版本有一个由来已久的问题就是Library不能获取project一致 的BuildType,Library默认只发布Release的AAR。这是因为Android中默认指定了发布type:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">private String defaultPublishConfig &#x3D; &quot;release&quot;;</span><br><span class="line">private boolean publishNonDefault &#x3D; false;</span><br></pre></td></tr></table></figure>
+<p> 默认Release，而flutter.gradle中通过buildtype来确定flutter的buildmode,在Android Gradle Plugin 3.+版本中，这个buildtype的问题已经得到解决，这也可能是flutter选用3.+版本的一个原因。</p>
+<p> 如果避免2.+的buildtype问题呢，网上是有一些获取project的buildtype配置给Library的方案，比如<a target="_blank" rel="noopener" href="https://www.jianshu.com/p/3751f95a6480">如何让library的buildType类型跟app的buildType类型一致(自由定义library的buildType) ??</a>。 我的实现方案是摈弃通过buildtype确定flutter的buildmode的方案，通过直接读取本地local.properties中的参数来决定，这样需要自己在本地手动的进行mode的切换，尤其是要注意上线的时候修改为Release模式。不过debug模式下页面有明显的debug标识，所以一般也不会出错。将flutter.gradle 中原有的buildmodefor方法：<br> <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">private static String buildModeFor(buildType) &#123;</span><br><span class="line">       if (buildType.name &#x3D;&#x3D; &quot;profile&quot;) &#123;</span><br><span class="line">           return &quot;profile&quot;</span><br><span class="line">       &#125; else if (buildType.name &#x3D;&#x3D; &quot;dynamicProfile&quot;) &#123;</span><br><span class="line">           return &quot;dynamicProfile&quot;</span><br><span class="line">       &#125; else if (buildType.name &#x3D;&#x3D; &quot;dynamicRelease&quot;) &#123;</span><br><span class="line">           return &quot;dynamicRelease&quot;</span><br><span class="line">       &#125; else if (buildType.debuggable) &#123;</span><br><span class="line">           return &quot;debug&quot;</span><br><span class="line">       &#125;</span><br><span class="line">       return &quot;release&quot;</span><br><span class="line">   &#125;</span><br></pre></td></tr></table></figure><br>修改为：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">private String buildModeFor(Project project) &#123;</span><br><span class="line">        return resolveProperty(project, &#39;flutter.buildMode&#39;, &#39;release&#39;)</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<p>这样在local.properties 中就可以进行debug和Release的切换：</p>
+<blockquote>
+<p>flutter.buildMode=release</p>
+</blockquote>
+<blockquote>
+<p>flutter.buildMode=debug</p>
+</blockquote>
+<h3 id="切换mode的崩溃问题"><a href="#切换mode的崩溃问题" class="headerlink" title="切换mode的崩溃问题"></a>切换mode的崩溃问题</h3><p>在第一次配置好工程或者切换mode的过程中，可能会遇到以下的崩溃问题：</p>
+<blockquote>
+<p>Check failed: vm. Must be able to initialize the VM.</p>
+</blockquote>
+<p>主要是由于不同模式下的产物没有清理使用了缓存，解决办法是删除掉所有build文件的内容再全量编译一次就可以了。</p>
+<h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h3><p>这是我在做flutter工程配置中遇到的一些坑，文风偏流水账，请大家见谅，只希望能对大家有一些借鉴意义。另外，我们已经在项目的两个模块中使用了flutter，开发效率确实能有很大提高，毕竟两端只需要一个人开发就ok，而且UI小姐姐要求的页面效果都能不折不扣的完成，上线之后目前还没发现什么问题。下一步需要做的是建立一个有效的监控体系，毕竟靠用户反馈还是不可靠也是滞后的。相信Flutter的未来一定是光明的！</p>
+</div><div class="article-tags is-size-7 mb-4"><span class="mr-2">#</span><a class="link-muted mr-2" rel="tag" href="/tags/Flutter/">Flutter</a></div><!--!--></article></div><!--!--><nav class="post-navigation mt-4 level is-mobile"><div class="level-start"><a class="article-nav-prev level level-item link-muted" href="/2020/12/19/Gson%E5%A2%9E%E9%87%8F%E8%A7%A3%E6%9E%90/"><i class="level-item fas fa-chevron-left"></i><span class="level-item">Gson增量解析</span></a></div><div class="level-end"><a class="article-nav-next level level-item link-muted" href="/2020/12/17/HTTPS%E5%8E%9F%E7%90%86%E5%8F%8AOKHTTP%E5%AF%B9HTTPS%E7%9A%84%E6%94%AF%E6%8C%81/"><span class="level-item">HTTPS原理及OKHTTP对HTTPS的支持</span><i class="level-item fas fa-chevron-right"></i></a></div></nav><!--!--></div><!--!--><!--!--></div></div></section><footer class="footer"><div class="container"><div class="level"><div class="level-start"><a class="footer-logo is-block mb-2" href="/">Hexo</a><p class="is-size-7"><span>&copy; 2020 John Doe</span>  Powered by <a href="https://hexo.io/" target="_blank" rel="noopener">Hexo</a> &amp; <a href="https://github.com/ppoffice/hexo-theme-icarus" target="_blank" rel="noopener">Icarus</a></p></div><div class="level-end"></div></div></div></footer><script src="https://cdn.jsdelivr.net/npm/jquery@3.3.1/dist/jquery.min.js"></script><script src="https://cdn.jsdelivr.net/npm/moment@2.22.2/min/moment-with-locales.min.js"></script><script src="https://cdn.jsdelivr.net/npm/clipboard@2.0.4/dist/clipboard.min.js" async></script><script>moment.locale("en");</script><script>var IcarusThemeSettings = {
+            article: {
+                highlight: {
+                    clipboard: true,
+                    fold: 'unfolded'
+                }
+            }
+        };</script><script src="/js/column.js"></script><!--!--><script src="/js/main.js" defer></script><!--!--></body></html>
