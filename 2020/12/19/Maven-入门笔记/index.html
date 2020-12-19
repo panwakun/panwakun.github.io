@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  
+  <title>Maven 入门笔记 | Hexo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="前言后端开发领域非常庞大，知识体系涉及非常广泛，作为一个安卓转后端开发的新人，需要学习的内容非常多，像数据库、缓存、消息队列、微服务架构、网络通信、RPC、JAVA 语言等等。而学习一个领域最好的方式就是把这块内容整理消化，成为自己知识图谱中的一部分。未来计划是将这些领域的基础知识点都能归纳总结，今天就迈出了第一步，将就 JAVA 开发中非常基础也很重要的构建工具 - Maven 做一些整理归纳，">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Maven 入门笔记">
+<meta property="og:url" content="http://example.com/2020/12/19/Maven-%E5%85%A5%E9%97%A8%E7%AC%94%E8%AE%B0/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="前言后端开发领域非常庞大，知识体系涉及非常广泛，作为一个安卓转后端开发的新人，需要学习的内容非常多，像数据库、缓存、消息队列、微服务架构、网络通信、RPC、JAVA 语言等等。而学习一个领域最好的方式就是把这块内容整理消化，成为自己知识图谱中的一部分。未来计划是将这些领域的基础知识点都能归纳总结，今天就迈出了第一步，将就 JAVA 开发中非常基础也很重要的构建工具 - Maven 做一些整理归纳，">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/2020/12/19/images/3.jpeg">
+<meta property="og:image" content="http://example.com/2020/12/19/images/4.jpeg">
+<meta property="og:image" content="http://example.com/2020/12/19/images/5.jpeg">
+<meta property="article:published_time" content="2020-12-19T11:08:07.000Z">
+<meta property="article:modified_time" content="2020-12-19T11:12:04.802Z">
+<meta property="article:author" content="John Doe">
+<meta property="article:tag" content="Maven">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/2020/12/19/images/3.jpeg">
+  
+    <link rel="alternate" href="/atom.xml" title="Hexo" type="application/atom+xml">
+  
+  
+    <link rel="shortcut icon" href="/favicon.png">
+  
+  
+    
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/typeface-source-code-pro@0.0.71/index.min.css">
+
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+    
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+<meta name="generator" content="Hexo 5.3.0"></head>
+
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">Hexo</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+          <a id="nav-rss-link" class="nav-icon" href="/atom.xml" title="RSS Feed"></a>
+        
+        <a id="nav-search-btn" class="nav-icon" title="Search"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="http://example.com"></form>
+      </div>
+    </div>
+  </div>
+</header>
+
+      <div class="outer">
+        <section id="main"><article id="post-Maven-入门笔记" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+  <div class="article-meta">
+    <a href="/2020/12/19/Maven-%E5%85%A5%E9%97%A8%E7%AC%94%E8%AE%B0/" class="article-date">
+  <time class="dt-published" datetime="2020-12-19T11:08:07.000Z" itemprop="datePublished">2020-12-19</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="p-name article-title" itemprop="headline name">
+      Maven 入门笔记
+    </h1>
+  
+
+      </header>
+    
+    <div class="e-content article-entry" itemprop="articleBody">
+      
+        <h3 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h3><p>后端开发领域非常庞大，知识体系涉及非常广泛，作为一个安卓转后端开发的新人，需要学习的内容非常多，像数据库、缓存、消息队列、微服务架构、网络通信、RPC、JAVA 语言等等。而学习一个领域最好的方式就是把这块内容整理消化，成为自己知识图谱中的一部分。未来计划是将这些领域的基础知识点都能归纳总结，今天就迈出了第一步，将就 JAVA 开发中非常基础也很重要的构建工具 - Maven 做一些整理归纳，一方面留给自己勘查校验使用，另一方面也希望对 JAVA 新手有一些借鉴意义。</p>
+<h3 id="1、Maven-是什么？"><a href="#1、Maven-是什么？" class="headerlink" title="1、Maven 是什么？"></a>1、Maven 是什么？</h3><p>对于一个安卓开发的同学来说，Maven 可能更多的意味着一个 Maven 仓库，用来管理第三方 Library 的生成物，实际上 Maven 是一个主要用于 Java 项目的构建管理工具。</p>
+<blockquote>
+<p>We wanted a standard way to build the projects, a clear definition of what the project consisted of, an easy way to publish project information and a way to share JARs across several projects.</p>
+</blockquote>
+<p>从官网的介绍中我们大概可以看到 Maven 包含以下几个主要的功能：</p>
+<ul>
+<li>标准的构建工具</li>
+<li>清晰的项目定义</li>
+<li>便易的项目发布</li>
+<li>轻松的依赖管理</li>
+</ul>
+<h3 id="2、两个重要配置文件"><a href="#2、两个重要配置文件" class="headerlink" title="2、两个重要配置文件"></a>2、两个重要配置文件</h3><h4 id="2-1-settings-xml"><a href="#2-1-settings-xml" class="headerlink" title="2.1 settings.xml"></a>2.1 settings.xml</h4><p>对于 Maven 的全局配置是通过 settings.xml 文件来进行管理的，settings 文件的配置包含两个作用域（ 用户域会高于版本域，当两个路径都有配置且存在相同配置项的时候，用户域优先 ）:</p>
+<table>
+<thead>
+<tr>
+<th>含义</th>
+<th>位置</th>
+<th>作用域</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>用户级</td>
+<td>%USER_HOME%/.m2/settings.xml</td>
+<td>当前用户</td>
+</tr>
+<tr>
+<td>版本级</td>
+<td>%M2_HOME%/conf/settings.xml</td>
+<td>当前版本</td>
+</tr>
+</tbody></table>
+<p>settings.xml 主要配置如下：</p>
+<table>
+<thead>
+<tr>
+<th>属性</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>localRepository</td>
+<td>本地仓库地址，默认是${user.home}/.m2/repository</td>
+</tr>
+<tr>
+<td>interactiveMode</td>
+<td>是否交互式创建Maven项目，默认true。</td>
+</tr>
+<tr>
+<td>usePluginRegistry</td>
+<td>是否需要使用plugin-registry.xml文件来管理插件版本，默认false。</td>
+</tr>
+<tr>
+<td>offline</td>
+<td>是否是离线模式下构建，默认false。</td>
+</tr>
+<tr>
+<td>proxies</td>
+<td>代理配置，科学上网</td>
+</tr>
+<tr>
+<td><strong><em>servers</em></strong></td>
+<td>服务认证，配合pom.xml中distributionManagement设置，用于上传私服的用户验证</td>
+</tr>
+<tr>
+<td>mirrors</td>
+<td>仓库镜像配置</td>
+</tr>
+<tr>
+<td><strong><em>profiles</em></strong></td>
+<td>多环境配置，设置环境参数</td>
+</tr>
+<tr>
+<td>activeProfiles</td>
+<td>默认激活的环境配置</td>
+</tr>
+<tr>
+<td>pluginGroups</td>
+<td>默认的pluginGroupId</td>
+</tr>
+</tbody></table>
+<h4 id="2-2-POM-xml"><a href="#2-2-POM-xml" class="headerlink" title="2.2 POM.xml"></a>2.2 POM.xml</h4><p>pom 的全称是项目对象模块（Project Object Model），它是一个 Maven 项目的核心，通过 xml 语言定义了一个项目的基本信息、依赖信息、构建参数等等。主要的配置参数如下：</p>
+<h5 id="2-2-1【基础信息】"><a href="#2-2-1【基础信息】" class="headerlink" title="2.2.1【基础信息】"></a>2.2.1【基础信息】</h5><p>指定了项目在 Maven 仓库中的唯一坐标：</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>groupId</td>
+<td>项目名称</td>
+</tr>
+<tr>
+<td>artifactId</td>
+<td>项目中细分的模块名称</td>
+</tr>
+<tr>
+<td>version</td>
+<td>版本号</td>
+</tr>
+<tr>
+<td>packaging</td>
+<td>打包方式，包含jar、pom、war等</td>
+</tr>
+</tbody></table>
+<h5 id="2-2-2【依赖信息】"><a href="#2-2-2【依赖信息】" class="headerlink" title="2.2.2【依赖信息】"></a>2.2.2【依赖信息】</h5><p>通过 dependencies 标签描述了项目依赖的其他项目，其中 groupId, artifactId, version 是必须的，唯一指定了一个项目的坐标，另外一个关键的参数是 scope ，指定了依赖的作用范围：</p>
+<table>
+<thead>
+<tr>
+<th>scope</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>compile</td>
+<td>默认值，一个比较强的依赖，参与编译、测试、打包</td>
+</tr>
+<tr>
+<td>provided</td>
+<td>参与编译，不参与打包</td>
+</tr>
+<tr>
+<td>runtime</td>
+<td>不参与编译，直接入包</td>
+</tr>
+<tr>
+<td>test</td>
+<td>只在测试时有效</td>
+</tr>
+</tbody></table>
+<p>通过 dependencyManagement 标签可以统一管理依赖的版本号，一般的，在父 POM 中的 dependencyManagement 声明用到的依赖及其版本，则可以在子 POM 中只引用 groupId 和 artifactId 并继承 version ，达到统一管理的目的。</p>
+<h5 id="2-2-3【聚合继承】"><a href="#2-2-3【聚合继承】" class="headerlink" title="2.2.3【聚合继承】"></a>2.2.3【聚合继承】</h5><p>现在的大型项目基本上都采用了多模块的架构方式，而 Maven 通过聚合继承了的方式很好的解决了多模块构建的问题。</p>
+<p>在 modules 标签中添加管理的子模块，Maven 在构建的就会根据模块之间的依赖关系按照顺序依次构建，避免了多模块开发中每个模块都需要单独构建的浪费。</p>
+<p>在 parent 标签中指定了父 POM 的地址，实际上子 POM 通过继承获取的绝大部分父 POM 的配置，Maven 通过这种继承的方式，大大简化了子 POM 的配置，同时将一些公共的配置放在父 POM 中管理，更有利于维护大型项目的规范性。如果没有指定 parent ，则默认系统的 pom.xml 这个超级 POM 作为父 POM， 实际上超级 POM 已经定义了很多默认参数作为最佳实践，简化了 POM 的配置。</p>
+<h5 id="2-2-4【构建参数】"><a href="#2-2-4【构建参数】" class="headerlink" title="2.2.4【构建参数】"></a>2.2.4【构建参数】</h5><p>通过 build 元素描述构建参数，pom.xml 中有两种 build 配置，一种是在 project 根标签下，称之为 Project Build，一种是在 profile 标签下，称之为 Profile Build，主要用于多环境配置中的构建配置，在我们的项目中使用比较少，下面主要介绍 Project Build 的主要配置：</p>
+<h5 id="2-2-4-1-基础信息"><a href="#2-2-4-1-基础信息" class="headerlink" title="2.2.4.1 基础信息"></a>2.2.4.1 基础信息</h5><p>主要描述跟构建相关的信息，比如源码路径、目标文件名、目标文件路径、</p>
+<ul>
+<li>defaultGoal,执行构建时默认的goal或phase</li>
+<li>directory, build 目标文件的存放目录，默认在 {basedir}/target 目录</li>
+<li>outputDirectory, build 源码目标文件的存放目录，默认在 {basedir}/target/classes 目录</li>
+<li>sourceDirectory, 源码目录</li>
+<li>finalName, build 目标文件的文件名，默认情况下为 {artifactId}-{version}</li>
+</ul>
+<h5 id="2-2-4-2-resources-标签"><a href="#2-2-4-2-resources-标签" class="headerlink" title="2.2.4.2 resources 标签"></a>2.2.4.2 resources 标签</h5><p>描述了项目中运行或测试相关的所有资源参数</p>
+<h5 id="2-2-4-3-plugins-标签"><a href="#2-2-4-3-plugins-标签" class="headerlink" title="2.2.4.3 plugins 标签"></a>2.2.4.3 plugins 标签</h5><p>Maven 的每一个构建任务的实际实现都是通过 plugin 完成的，Maven 提供了一个可执行的环境，具体的构建任务是在各种 plugin 中定义的，比如用于编译的 compile 插件，用户打包的 jar 插件等等。Maven 已经提供了大量默认 plugin 涵盖项目的编译、测试、打包、部署等方方面面。目前 Maven 官方有两个插件列表，第一个列表的 GroupId 为 <a target="_blank" rel="noopener" href="http://maven.apache.org/plugins/index.html">org.apache.maven.plugins</a>，这里的插件最为成熟 。第二个列表的 GroupId 为 <a target="_blank" rel="noopener" href="http://mojo.codehaus.org/plugins.html">org.codehaus.mojo</a>，这里的插件没有那么核心，但也有不少十分有用。项目中经常用到的一些插件包括：</p>
+<ul>
+<li>maven-clean-plugin</li>
+<li>maven-compiler-plugin</li>
+<li>maven-deploy-plugin</li>
+<li>maven-install-plugin</li>
+<li>maven-antrun-plugin  </li>
+<li>maven-archetype-plugin</li>
+<li>maven-assembly-plugin</li>
+<li>maven-dependency-plugin</li>
+<li>maven-enforcer-plugin</li>
+<li>maven-help-plugin</li>
+<li>maven-release-plugin</li>
+<li>maven-resources-plugin</li>
+<li>maven-surefire-plugin</li>
+<li>build-helper-maven-plugin</li>
+<li>exec-maven-plugin</li>
+<li>jetty-maven-plugin</li>
+<li>versions-maven-plugin</li>
+</ul>
+<h5 id="2-2-5【环境参数】"><a href="#2-2-5【环境参数】" class="headerlink" title="2.2.5【环境参数】"></a>2.2.5【环境参数】</h5><p>通过 scm 标签配置项目的代码仓库配置，这个一般在公司项目中很少使用。<br>通过 distributionManagement 标签，可以指定 Maven 上传的地址，一般会定义 release 和 snapshot 两个仓库，同时配合 Setting.xml 中 servers 的用户登录配置，完成私仓的上传校验。<br>通过 profiles 标签定义了多环境下的参数配置，一般用于区分开发环境、测试环境和线上环境等。</p>
+<h3 id="3、生命周期"><a href="#3、生命周期" class="headerlink" title="3、生命周期"></a>3、生命周期</h3><h4 id="3-1-深入理解-lifecycle、phase、goal、plugin"><a href="#3-1-深入理解-lifecycle、phase、goal、plugin" class="headerlink" title="3.1 深入理解 lifecycle、phase、goal、plugin"></a>3.1 深入理解 lifecycle、phase、goal、plugin</h4><p>Maven 抽象了一个生命周期(lifecycle)的概念，把一个Java项目的构建过程抽象为三种场景：清除(clean)、构建(default)、部署(site)。生命周期是构建过程的统一和抽象，没有具体执行任务。一个场景的生命周期中被划分为多个阶段(phase),而每个阶段又包含着一个或者多个目标(goal)，而每个目标才是真正要实现的操作，这部分实现是在插件(plugin)中完成的。</p>
+<p>实际上 Maven 打造了两套系统，一个是通过定义【生命周期】、【阶段】、【目标】这三层结构创建了一个可执行的环境，将 Java 项目中的不同场景进行了覆盖。另一个是通过定义一套【插件】系统，去具体完成一些构建目标。然后通过一种绑定机制，非常有效的将插件运行在 Maven 的执行环境中。实际上看这两套系统的实现非常契合我们常见的模版模式的一种设计方式，也让我们的插件系统有了更好的拓展性。</p>
+<p>将 Maven 插件目标和生命周期阶段进行绑定可以在执行某一阶段的构建时运行插件的目标，目前 Maven 已经提供了以下一些内置的标准绑定：</p>
+<table>
+    <tr>
+        <th>生命周期</th>
+        <th>阶段</th>
+        <th>插件目标</th>
+    </tr>
+    <tr>
+        <td>clean</td> 
+        <td>clean</td> 
+          <td>maven-clean-plugin:clean</td>   
+    </tr>
+    </tr>
+    <tr>
+        <td rowspan="8">default</td> 
+         <td>process-resources</td> 
+        <td>maven-resources-plugin:resources</td>  
+    </tr>
+    <tr>
+        <td>compile</td> 
+          <td>maven-compiler-plugin:compile</td>   
+    </tr>
+    <tr>
+        <td>process-test-resources</td> 
+         <td>maven-resources-plugin:testResources</td>   
+    </tr>
+    <tr>
+        <td>test-compile</td> 
+         <td>maven-compiler-plugin:testCompile</td>   
+    </tr>
+    <tr>
+        <td>test</td> 
+         <td>maven-surefire-plugin:test</td>   
+    </tr>
+    <tr>
+        <td>package</td> 
+         <td>maven-jar-plugin:jar</td>   
+    </tr>
+    <tr>
+        <td>install</td> 
+         <td>maven-install-plugin:install</td>   
+    </tr>
+    <tr>
+        <td>deploy</td> 
+         <td>maven-deploy-plugin:deploy</td>   
+    </tr>
+    <tr>
+        <td rowspan="2">site</td> 
+         <td>site</td> 
+        <td>maven-site-plugin:site</td>  
+    </tr>
+    <tr>
+        <td>site-deploy</td> 
+          <td>maven-site-plugin:deploy</td>   
+    </tr>
+</table>
+
+<p>除了内置的绑定关系外，Maven还提供了一种自定义的绑定方式，不过这里有一点局限的是绑定的阶段必须是 Maven 已经预置的阶段(phase)，可以在 POM 的 executions 标签中进行配置：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">&lt;plugin&gt;</span><br><span class="line">    &lt;artifactId&gt;maven-source-plugin&lt;&#x2F;artifactId&gt;</span><br><span class="line">    &lt;version&gt;3.0.1&lt;&#x2F;version&gt;</span><br><span class="line">    &lt;executions&gt;</span><br><span class="line">        &lt;execution&gt;</span><br><span class="line">            &lt;id&gt;attach-sources&lt;&#x2F;id&gt;</span><br><span class="line">            &lt;phase&gt;compile&lt;&#x2F;phase&gt;</span><br><span class="line">            &lt;goals&gt;</span><br><span class="line">                &lt;goal&gt;jar-no-fork&lt;&#x2F;goal&gt;</span><br><span class="line">            &lt;&#x2F;goals&gt;</span><br><span class="line">        &lt;&#x2F;execution&gt;</span><br><span class="line">    &lt;&#x2F;executions&gt;</span><br><span class="line">&lt;&#x2F;plugin&gt;</span><br></pre></td></tr></table></figure>
+<h4 id="3-2、mvn-命令行"><a href="#3-2、mvn-命令行" class="headerlink" title="3.2、mvn 命令行"></a>3.2、mvn 命令行</h4><p>Maven 提供了 mvn 的命令行工具，用于项目的构建执行。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mvn [options] [&lt;goal(s)&gt;] [&lt;phase(s)&gt;]</span><br></pre></td></tr></table></figure>
+<p>mvn 实际上提供了两种构建的方式，一种是执行指定的goal(s)，一种是执行phase(s)。不同的是，执行 phase 的时候会先执行依赖的 phase ，而执行 goal 仅仅执行自己，需要已经存在前置依赖的环境，否则失败。两种调用方式以 install 举例说明：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">mvn install  ( phase 方式)</span><br><span class="line">mvn org.apache.maven.plugins:maven-install-plugin:2.4:install ( goal 方式)</span><br></pre></td></tr></table></figure>
+<p>前面我们提到，我们把插件目标和生命周期阶段绑定之后，实际上我们执行 mvn [&lt;phase(s)&gt;] 就是执行一个有序的 goals 列表。当然我们看到，上面这种执行 goal 的方式命令太长，参数比较繁琐，实际上它有几个简化的版本：</p>
+<p>首先版本号如果没有特殊指定 Maven 会到对应插件的 <a target="_blank" rel="noopener" href="http://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-install-plugin/maven-metadata.xml">maven-metadata.xml</a> 文件中找到 release 版本进行使用，所以命令可以简化为：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mvn org.apache.maven.plugins:maven-install-plugin:install</span><br></pre></td></tr></table></figure>
+<p>另外 Maven 默认以 org.apache.maven.plugins 作为 groupId ，我们可以在 settings.xml 文件中通过 pluginGroups 标签指定默认的 groupId ，所以我们可以省略一长串的 groupId ，去掉 groupId 之后，我们还可以使用 plugin 的缩略名，这个缩略名定义在 plugins 仓库的 <a target="_blank" rel="noopener" href="http://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-metadata.xml">maven-metadata.xml</a> 文件中。 maven-install-plugin 插件的缩略名为 install ，所以我们的命令最终可以简写为：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mvn install:install</span><br></pre></td></tr></table></figure>
+
+<h3 id="4、依赖管理"><a href="#4、依赖管理" class="headerlink" title="4、依赖管理"></a>4、依赖管理</h3><h4 id="4-1-依赖传递"><a href="#4-1-依赖传递" class="headerlink" title="4.1 依赖传递"></a>4.1 依赖传递</h4><p>Maven 提供了一种隐性依赖的方式将间接依赖的三方库像直接依赖一样，举例来说，项目 A 依赖了项目 B ，项目 B 依赖了项目 C ，那项目 A 就像直接依赖了项目 C 一样使用项目 C 对外暴露的功能。不过在一个大型的项目管理中，错综复杂的依赖关系会导致依赖传递过程中出现的各种依赖冲突。一般地，我们可以通过 dependencyManagement 在根项目中指定项目的版本，如果没有指定，Maven 将按照默认提供的依赖仲裁法案对于版本号不一致的项目进行科学仲裁，这跟 Gradle 中默认选择最高版本的做法不太一致，这种仲裁有两个原则：<br>一、就近原则，根据项目依赖深度选择最近依赖的版本；</p>
+<pre><code>A -&gt; B -&gt; C 2.0
+A -&gt; C 1.0
+通过就近原则，最终 A 依赖 C 的是 1.0 的版本。</code></pre>
+<p>二、优先声明原则，如果路径深度一致，则选择最先声明的版本。</p>
+<pre><code>A -&gt; B -&gt; C 2.0
+A -&gt; D -&gt; C 1.0
+通过优先声明原则，最终 A 依赖 C 的是 2.0 的版本。</code></pre>
+<p>另外，通过 exclusion 标签可以把不需要的项目版本排除依赖，直接指定特定的版本来解决依赖冲突。</p>
+<h4 id="4-2-依赖带来的问题"><a href="#4-2-依赖带来的问题" class="headerlink" title="4.2 依赖带来的问题"></a>4.2 依赖带来的问题</h4><ul>
+<li><p>java.lang.ClassNotFoundException</p>
+</li>
+<li><p>java.lang.NoSuchMethodException</p>
+</li>
+</ul>
+<p>一般的，当我们遇到这两类错误的时候，第一反应就是引用的jar包版本不对，一方面有可能是使用的三方jar包与线上环境不一致，导致运行时无法找到类或者方法而抛错，另一方面，可能更常见的是由于多方依赖导致的依赖冲突，由于 Maven 仲裁只能选择一个版本，导致另外一个版本所使用的API存在 NotFound 的风险。</p>
+<h4 id="4-3-冲突解决"><a href="#4-3-冲突解决" class="headerlink" title="4.3 冲突解决"></a>4.3 冲突解决</h4><p>在 Intellij idea 上可以非常方便的查看一个项目的依赖关系，总体来说有以下几个方式：</p>
+<p>1）通过查看 pom 文件的 Diagrams ，在 IDE 上会生成项目的依赖关系 UML 图，图中不仅以树状的结构清晰的展示了项目直接依赖和间接依赖的所有项目，同时对于有依赖版本冲突的项目通过红线标注，可以很方便的使用 exclusion 排除进行冲突解决。</p>
+<p><img src="../images/3.jpeg"></p>
+<p>2）安装 Maven Helper 插件，可以对于每个 pom.xml 文件提供 Dependency Analyzer 功能，对于版本冲突的依赖会高亮显示，右击 Exclude 可排除依赖。</p>
+<p><img src="../images/4.jpeg"></p>
+<p>3）IDE 中 Maven 侧边栏中通过层级结构清晰的显示了依赖关系，对于冲突的版本通过灰色进行了说明。</p>
+<p><img src="../images/5.jpeg"></p>
+<p>4） mvn dependency:tree 命令可以打印出当前项目的依赖树，不过总体上没有以上三种直观。</p>
+<h3 id="5、自定义插件"><a href="#5、自定义插件" class="headerlink" title="5、自定义插件"></a>5、自定义插件</h3><p>除系统提供的 Maven 插件外，我们还可以根据自己业务的特定需求，自定义符合自己需要的 Maven 插件，比较熟悉的像 MyBatis 插件，就是帮助我们自动生成数据库相关的交互代码，通过定义插件，一方面可以简化我们某些特定的代码编写，另外一方面也可以将我们的某部分代码进行规范，减少手写误操作引入的bug 。</p>
+<p>自定义插件的方式非常简单，主要是继承 AbstractMojo 类并实现 execute 方法，这方面的资料在网上也比较多，最主要的是大家应该知道在什么场景下需要实现自定义的插件。这里就我们现实中的一个需求，编写了一个简单的插件来说明自定义插件的意义。</p>
+<p>代码地址在: <a target="_blank" rel="noopener" href="https://github.com/pandavickey/panda-maven">Github:panda-maven</a></p>
+<p>这个插件的使用场景是对我们需要的 service 对外暴露生成一个 interface ，因为在我们公司提供的 SOA 服务中，是以 interface 进行注册的，如果我们想对一些特定的 service 对外暴露，就需要手写一些 interface 及 impl，这些非常机械的工作当然是可以交给 Maven 插件来完成的。插件比较简单，仅仅作为自己学习 Maven 练手使用，如果大家有类似的需求，可以在此基础上进行优化完善。</p>
+<h3 id="6、结语：约定优于配置"><a href="#6、结语：约定优于配置" class="headerlink" title="6、结语：约定优于配置"></a>6、结语：<em>约定优于配置</em></h3><p>实际上，Maven 一直提倡的是简约风。将大家约定俗成的规范设置为默认配置，提供最佳实践作为 Maven 使用规范，使得我们在日常的使用过程中只需要对 Maven 进行简单的配置就可以完成绝大部分的工作。我们应该谨记 Maven 的这条经验，尽量使用默认提供的配置选项，减少奇奇怪怪的特定配置。</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://example.com/2020/12/19/Maven-%E5%85%A5%E9%97%A8%E7%AC%94%E8%AE%B0/" data-id="ckivm36bk000e46jghnq4bb2l" data-title="Maven 入门笔记" class="article-share-link">Share</a>
+      
+      
+      
+  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Maven/" rel="tag">Maven</a></li></ul>
+
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/2020/12/19/%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86-%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Platform-Channel/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          底层原理 - 深入探索Platform Channel
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2020/12/19/Android-Gradle-Plugin%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">Android Gradle Plugin源码解析</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tags</h3>
+    <div class="widget">
+      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/Android/" rel="tag">Android</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Flutter/" rel="tag">Flutter</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Gradle/" rel="tag">Gradle</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Maven/" rel="tag">Maven</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tag Cloud</h3>
+    <div class="widget tagcloud">
+      <a href="/tags/Android/" style="font-size: 20px;">Android</a> <a href="/tags/Flutter/" style="font-size: 20px;">Flutter</a> <a href="/tags/Gradle/" style="font-size: 10px;">Gradle</a> <a href="/tags/Maven/" style="font-size: 10px;">Maven</a>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/12/">December 2020</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recent Posts</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2020/12/19/%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86-%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Platform-Channel/">底层原理 - 深入探索Platform Channel</a>
+          </li>
+        
+          <li>
+            <a href="/2020/12/19/Maven-%E5%85%A5%E9%97%A8%E7%AC%94%E8%AE%B0/">Maven 入门笔记</a>
+          </li>
+        
+          <li>
+            <a href="/2020/12/19/Android-Gradle-Plugin%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/">Android Gradle Plugin源码解析</a>
+          </li>
+        
+          <li>
+            <a href="/2020/12/19/Gson%E5%A2%9E%E9%87%8F%E8%A7%A3%E6%9E%90/">Gson增量解析</a>
+          </li>
+        
+          <li>
+            <a href="/2020/12/19/Flutter%E6%8E%A5%E5%85%A5%E7%8E%B0%E6%9C%89Android%E5%B7%A5%E7%A8%8B%E8%B8%A9%E5%9D%91%E4%B9%8B%E6%97%85/">Flutter接入现有Android工程踩坑之旅</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      
+      &copy; 2020 John Doe<br>
+      Powered by <a href="https://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+
+<script src="/js/jquery-3.4.1.min.js"></script>
+
+
+
+  
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+<script src="/js/script.js"></script>
+
+
+
+
+
+  </div>
+</body>
+</html>

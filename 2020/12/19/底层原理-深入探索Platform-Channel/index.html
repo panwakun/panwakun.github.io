@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  
+  <title>底层原理 - 深入探索Platform Channel | Hexo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="Flutter 提供了完善的 Platform Channel 机制供 Native 与 Flutter 端进行相互通信，本节由浅入深，详细探索 Platform Channel 的实现细节。 怎么用首先我们简单介绍下 Platform Channel 的使用姿势，Flutter提供了三种Channel的方式：  BaseMessageChannel，消息的传递，用于数据的传递。 MethodCh">
+<meta property="og:type" content="article">
+<meta property="og:title" content="底层原理 - 深入探索Platform Channel">
+<meta property="og:url" content="http://example.com/2020/12/19/%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86-%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Platform-Channel/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="Flutter 提供了完善的 Platform Channel 机制供 Native 与 Flutter 端进行相互通信，本节由浅入深，详细探索 Platform Channel 的实现细节。 怎么用首先我们简单介绍下 Platform Channel 的使用姿势，Flutter提供了三种Channel的方式：  BaseMessageChannel，消息的传递，用于数据的传递。 MethodCh">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/2020/12/19/images/6.jpeg">
+<meta property="article:published_time" content="2020-12-19T11:20:08.000Z">
+<meta property="article:modified_time" content="2020-12-19T11:21:27.067Z">
+<meta property="article:author" content="John Doe">
+<meta property="article:tag" content="Flutter">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/2020/12/19/images/6.jpeg">
+  
+    <link rel="alternate" href="/atom.xml" title="Hexo" type="application/atom+xml">
+  
+  
+    <link rel="shortcut icon" href="/favicon.png">
+  
+  
+    
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/typeface-source-code-pro@0.0.71/index.min.css">
+
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+    
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+<meta name="generator" content="Hexo 5.3.0"></head>
+
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">Hexo</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+          <a id="nav-rss-link" class="nav-icon" href="/atom.xml" title="RSS Feed"></a>
+        
+        <a id="nav-search-btn" class="nav-icon" title="Search"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="http://example.com"></form>
+      </div>
+    </div>
+  </div>
+</header>
+
+      <div class="outer">
+        <section id="main"><article id="post-底层原理-深入探索Platform-Channel" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+  <div class="article-meta">
+    <a href="/2020/12/19/%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86-%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Platform-Channel/" class="article-date">
+  <time class="dt-published" datetime="2020-12-19T11:20:08.000Z" itemprop="datePublished">2020-12-19</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="p-name article-title" itemprop="headline name">
+      底层原理 - 深入探索Platform Channel
+    </h1>
+  
+
+      </header>
+    
+    <div class="e-content article-entry" itemprop="articleBody">
+      
+        <p>Flutter 提供了完善的 Platform Channel 机制供 Native 与 Flutter 端进行相互通信，本节由浅入深，详细探索 Platform Channel 的实现细节。</p>
+<h1 id="怎么用"><a href="#怎么用" class="headerlink" title="怎么用"></a>怎么用</h1><p>首先我们简单介绍下 Platform Channel 的使用姿势，Flutter提供了三种Channel的方式：</p>
+<ul>
+<li>BaseMessageChannel，消息的传递，用于数据的传递。</li>
+<li>MethodChannel，方法的传递，用于方法调用，传递参数并返回执行结果。</li>
+<li>EventChannel，事件的传递，用于Native端对Flutter端高频的通知触发。</li>
+</ul>
+<h3 id="MethodChannel-Android"><a href="#MethodChannel-Android" class="headerlink" title="MethodChannel - Android"></a>MethodChannel - Android</h3><p>构造函数，通常messenger传递FlutterNativeView实现的DartExecutor, name是Channel匹配的key值，codec是消息传递的编解码，默认是StandardMethodCodec。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">MethodChannel(BinaryMessenger messenger, String name, MethodCodec codec)</span><br></pre></td></tr></table></figure>
+<p>调用Flutter端方法，参数依次是方法名、参数以及返回值的回调。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">invokeMethod(String method, Object arguments, MethodChannel.Result callback)</span><br></pre></td></tr></table></figure>
+<p>设置方法被调用的处理器，Flutter调用原生代码会调用handler的onMethodCall方法。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">setMethodCallHandler(MethodChannel.MethodCallHandler handler)</span><br></pre></td></tr></table></figure>
+<h3 id="MethodChannel-iOS"><a href="#MethodChannel-iOS" class="headerlink" title="MethodChannel - iOS"></a>MethodChannel - iOS</h3><p>构造函数</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">- (instancetype)initWithName:(NSString*)name</span><br><span class="line">             binaryMessenger:(NSObject&lt;FlutterBinaryMessenger&gt;*)messenger</span><br><span class="line">                       codec:(NSObject&lt;FlutterMessageCodec&gt;*)codec;</span><br></pre></td></tr></table></figure>
+<p>调用Flutter方法</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">- (void)invokeMethod:(NSString*)method</span><br><span class="line">           arguments:(id _Nullable)arguments</span><br><span class="line">              result:(FlutterResult _Nullable)callback</span><br></pre></td></tr></table></figure>
+<p>设置方法回调</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">- (void)setMethodCallHandler:(FlutterMethodCallHandler _Nullable)handler;</span><br></pre></td></tr></table></figure>
+<h3 id="MethodChannel-Flutter"><a href="#MethodChannel-Flutter" class="headerlink" title="MethodChannel - Flutter"></a>MethodChannel - Flutter</h3><p>构造函数</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">- MethodChannel(this.name, [this.codec &#x3D; const StandardMethodCodec()])</span><br></pre></td></tr></table></figure>
+<p>调用Native方法</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">- invokeMethod(String method, [dynamic arguments])</span><br></pre></td></tr></table></figure>
+<p>设置方法回调</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">- setMethodCallHandler(Future&lt;dynamic&gt; handler(MethodCall call))</span><br></pre></td></tr></table></figure>
+<p>BaseMessageChannel、EventChannel和MethodChannel的使用方式十分类似，这里就不一一赘述了。</p>
+<h1 id="怎么实现的"><a href="#怎么实现的" class="headerlink" title="怎么实现的"></a>怎么实现的</h1><p>Platform Channel 以 engine 为媒介，在 native 端或者 dart 端进行消息的编码，经过 engine 传递，在另一端进行消息的解码，完成整个消息的通信。这个过程涉及到 messager （信使）、<br>codec（编解码器）以及 handler（处理器），下面将分别介绍。</p>
+<h2 id="messager"><a href="#messager" class="headerlink" title="messager"></a>messager</h2><p>messager 在整个消息传递过程中，作为信使的角色，实现了完整的消息传递。我们看一下 Android 端 BinaryMessenger 的代码，iOS 和 Dart 部分 API 高度一致。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">public interface BinaryMessenger &#123;</span><br><span class="line">   </span><br><span class="line">    void send(String channel, ByteBuffer message);</span><br><span class="line"></span><br><span class="line">    void send(String channel, ByteBuffer message, BinaryReply callback);</span><br><span class="line"></span><br><span class="line">    void setMessageHandler(String channel, BinaryMessageHandler handler);</span><br><span class="line"></span><br><span class="line">    interface BinaryMessageHandler &#123;</span><br><span class="line">        </span><br><span class="line">        void onMessage(ByteBuffer message, BinaryReply reply);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    interface BinaryReply &#123;</span><br><span class="line">        </span><br><span class="line">        void reply(ByteBuffer reply);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>BinaryMessenger 提供了两个 send 方法，可选择是否回调消息的处理结果，提供了 setMessageHandler 用以处理 Dart 端 Channel 调用的消息处理。BinaryMessenger 的一个具体实现在 DartMessenger，维护了 messageHandlers 和 pendingReplies 两个 HashMap 分别处理 Dart 端消息请求的响应以及自己发送消息之后的回调。具体的消息传递的完成流程我们等会再讲，先分析一下 codec（编解码器）和 handler（处理器）的实现细节。</p>
+<h2 id="codec"><a href="#codec" class="headerlink" title="codec"></a>codec</h2><p>让消息在 dart、engine 以及平台（ Android / iOS ）之间自由传递，需要将消息在传递前编码为平台无关的二进制数据，在接收后解码为原始的数据格式。Flutter 提供了两种 codec , BaseMessageChannel 使用了 MessageCodec , EventChannel 和 MethodChannel 使用了 MethodCodec。</p>
+<p>MessageCodec 提供了 encodeMessage 和 decodeMessage 两个接口，以 Android 为例，它的代码实现如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">public interface MessageCodec&lt;T&gt; &#123;</span><br><span class="line"></span><br><span class="line">    ByteBuffer encodeMessage(T message);</span><br><span class="line"></span><br><span class="line">    T decodeMessage(ByteBuffer message);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>Flutter 官方默认已经实现的 MessageCodec 有 StandardMessageCodec、BinaryCodec、StringCodec、JSONMessageCodec 。默认已经实现的 MethodCodec 有 StandardMethodCodec、JSONMethodCodec。</p>
+<table>
+  <tr>
+    <th></th>
+    <th>Codec</th>
+    <th>Desc</th>
+  </tr>
+  <tr>
+    <td rowspan="4"> MessageCodec </td>
+    <td > StandardMessageCodec </td>
+    <td >支持基础数据格式与二进制之间的转换，包括 Boolean 、Number、String、Byte、List、Map、数组等。</td>
+  </tr>
+  <tr>
+    <td> BinaryCodec </td>
+    <td>支持二进制数据的直接传递，实际上是没有做任何编解码，可以通过它做大内存块的数据传递。</td>
+  </tr>
+  <tr>
+    <td> StringCodec </td>
+    <td>支持字符串（UTF-8）与二进制之间的转换。</td>
+  </tr>
+  <tr>
+    <td> JSONMessageCodec  </td>
+    <td>支持把数据转换为JSON，再调用 StringCodec 的编解码。</td>
+  </tr>
+  <tr>
+    <td rowspan="2"> MethodCodec </td>
+    <td> StandardMethodCodec </td>
+    <td>调用 StandardMessageCodec 传递方法的名字和参数。</td>
+  </tr>
+  <tr>
+    <td> JSONMethodCodec </td>
+    <td>调用 JSONMessageCodec 传递方法的名字和参数。</td>
+  </tr>
+</table>
+消息的编解码方式可以根据自己的需要从系统提供的 Codec 中选取，也可以完全自定义自己的 Codec 满足实际的业务需求。这里想实现一种基于 Protocol Buffers 协议的编解码器,作为一种简单的学习锻炼，后续会发布在 [Github](https://github.com/flutterboom/flutter-triple-sample) 上供大家参考。
+
+
+<h2 id="Handler"><a href="#Handler" class="headerlink" title="Handler"></a>Handler</h2><p>Flutter 提供了 Handler 作为消息的处理器，用来处理接收方获取的消息。针对 BaseMessageChannel、MethodChannel 和 EventChannel 三种 Channel 分别提供了 IncomingMessageHandler、IncomingMethodCallHandler 和 IncomingStreamRequestHandler 三种 Handler，实际上是分别包装了 MessageHandler 、MethodCallHandler 和 StreamHandler  来处理对方发送过来的消息。</p>
+<h3 id="MessageHandler"><a href="#MessageHandler" class="headerlink" title="MessageHandler"></a>MessageHandler</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">public interface MessageHandler&lt;T&gt; &#123;</span><br><span class="line"></span><br><span class="line">   void onMessage(T message, Reply&lt;T&gt; reply);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">public interface Reply&lt;T&gt; &#123;</span><br><span class="line"></span><br><span class="line">   void reply(T reply);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>onMessage 接收获取的 message ，并提供回调 reply 。</p>
+<h3 id="MethodCallHandler"><a href="#MethodCallHandler" class="headerlink" title="MethodCallHandler"></a>MethodCallHandler</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">public interface MethodCallHandler &#123;</span><br><span class="line"></span><br><span class="line">    void onMethodCall(MethodCall call, Result result);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">public interface Result &#123;</span><br><span class="line"></span><br><span class="line">    void success(@Nullable Object result);</span><br><span class="line"></span><br><span class="line">    void error(String errorCode, @Nullable String errorMessage, @Nullable Object errorDetails);</span><br><span class="line"></span><br><span class="line">    void notImplemented();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>onMethodCall 响应调用的函数，并提供函数的返回值 Result。</p>
+<h3 id="StreamHandler"><a href="#StreamHandler" class="headerlink" title="StreamHandler"></a>StreamHandler</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">public interface StreamHandler &#123;</span><br><span class="line"></span><br><span class="line">    void onListen(Object arguments, EventSink events);</span><br><span class="line"></span><br><span class="line">    void onCancel(Object arguments);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">public interface EventSink &#123;</span><br><span class="line"></span><br><span class="line">    void success(Object event);</span><br><span class="line"></span><br><span class="line">    void error(String errorCode, String errorMessage, Object errorDetails);</span><br><span class="line"></span><br><span class="line">    void endOfStream();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>onListen 开启监听并发送数据，onCancel 取消监听。</p>
+<h2 id="消息传递过程"><a href="#消息传递过程" class="headerlink" title="消息传递过程"></a>消息传递过程</h2><p>分析 Platform Channel 一个消息的完整调用路径：</p>
+<h3 id="native-gt-dart"><a href="#native-gt-dart" class="headerlink" title="native -&gt; dart"></a>native -&gt; dart</h3><blockquote>
+<p>从 DartMessenger 的 send 方法开始，<br>Java 通过 JNI 、iOS 直接调用 C/C++代码，<br>把消息通过 dispatchPlatformMessage 方法传递到 engine 层的 PlatformView 中，<br>然后分别经过 engine 、RuntimeController 最后调用 window 的 dispatchPlatformMessage 方法。<br>window 会自增一个 response_id 并创建一个 response 保存在 pending_responses_ 队列中，通过 tonic 库中的 DartInvokeField 方法调用 Dart 端的 _dispatchPlatformMessage，<br>完成了一个消息从 native 到 dart 的传递，<br>dart 端调用 window 的 onPlatformMessage 方法，<br>通过 channel name 匹配出已经注册好的 handler ，<br>执行后 通过 window 的 <em>respondToPlatformMessage 方法回调到 engine 层的 RespondToPlatformMessage 方法。<br>engine 根据 response_id 在 pending_responses</em> 取出对应的 response 执行 Complete 方法把结果返回给 Native 端，<br>Native 端在 DartMessenger 中的 handlePlatformMessageResponse 方法中处理具体返回的结果，完成了一整个的消息传递过程。</p>
+</blockquote>
+<h3 id="dart-gt-native"><a href="#dart-gt-native" class="headerlink" title="dart -&gt; native"></a>dart -&gt; native</h3><p>完整的过程跟 native 到 dart 的逻辑基本一致，除了一些函数调用上的差别，文字描述比较费力，这边是简单的做了一个图比较直观的看到整个消息的具体流向。</p>
+<p><img src="../images/6.jpeg"></p>
+<h1 id="Flutter-Support-Native"><a href="#Flutter-Support-Native" class="headerlink" title="Flutter Support Native"></a>Flutter Support Native</h1><p>在整个 Platform Channel 的实现细节梳理的过程中，我们不仅学习了一个数据通信的完整架构，同时也看到了大量的多种语言之间的相互调用。消息可以在不同的语言中自由的流转，主要是各种语言都实现了到 C/C++的函数调用的框架，Java 和 OC 已经有很成熟的支持 Native 的方案，Dart 也提供对 C/C++ 代码的调用的技术，具体的用法如下：</p>
+<h2 id="Dart-调用-C-C-代码"><a href="#Dart-调用-C-C-代码" class="headerlink" title="Dart 调用 C/C++ 代码"></a>Dart 调用 C/C++ 代码</h2><p>Dart 对 C/C++ 的支持目前还并不完善，社区中吐槽 Dart 对 Native 支持进展缓慢的帖子很多，主要的嘈点是目前官方对于 Native 的支持文章 <a target="_blank" rel="noopener" href="https://dart.dev/server/c-interop-native-extensions">Native extensions for the standalone Dart VM</a> 还是 12 年 5 月份撰写的, 笔者也是根据这篇文章的指南调通了 Dart 对 C++ 的调用。在C++中实现了一个简单的加法运算，打包成 lib 提供给 Dart 调用。部分主要代码如下，完整工程可以在  <a target="_blank" rel="noopener" href="https://github.com/flutterboom/flutter-triple-sample/tree/master/dart-native-test">Github</a> 上查看，欢迎 Star 。</p>
+<h3 id="native-plus-cc"><a href="#native-plus-cc" class="headerlink" title="native_plus.cc"></a>native_plus.cc</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;第一次调用给定名称的本地函数时，将本地函数的 Dart 名称解析为 C 函数指针。</span><br><span class="line">Dart_NativeFunction ResolveName(Dart_Handle name,</span><br><span class="line">                                int argc,</span><br><span class="line">                                bool* auto_setup_scope);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;在 lib 被加载时被调用。</span><br><span class="line">DART_EXPORT Dart_Handle native_plus_Init(Dart_Handle parent_library) ；</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F; 实现了一个加法运算</span><br><span class="line">void NativePlus(Dart_NativeArguments args) &#123;</span><br><span class="line">    Dart_EnterScope();</span><br><span class="line">    int64_t result &#x3D; 0;</span><br><span class="line">    Dart_Handle plus_a &#x3D; HandleError(Dart_GetNativeArgument(args, 0));</span><br><span class="line">    Dart_Handle plus_b &#x3D; HandleError(Dart_GetNativeArgument(args, 1));</span><br><span class="line">    if (Dart_IsInteger(plus_a) &amp;&amp; Dart_IsInteger(plus_b)) &#123;</span><br><span class="line">        int64_t a,b;</span><br><span class="line">        HandleError(Dart_IntegerToInt64(plus_a, &amp;a));</span><br><span class="line">        HandleError(Dart_IntegerToInt64(plus_b, &amp;b));</span><br><span class="line">        result &#x3D; a + b;</span><br><span class="line">    &#125;</span><br><span class="line">    Dart_SetReturnValue(args, HandleError(Dart_NewInteger(result)));</span><br><span class="line">    Dart_ExitScope();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;注册的方法列表</span><br><span class="line">FunctionLookup function_list[] &#x3D; &#123;</span><br><span class="line">    &#123;&quot;NativePlus&quot;, NativePlus&#125;,</span><br><span class="line">    &#123;NULL, NULL&#125;&#125;;</span><br></pre></td></tr></table></figure>
+<p>C++代码可以根据不同平台 build 对应的链接库，我这边测试了在 MacOS上的导出，具体步骤如下：</p>
+<blockquote>
+<p> 使用 Xcode 创建本地扩展 dylib 项目：<br> 1、选择新建类型：File -&gt; New -&gt; Project -&gt; macOS -&gt; Library<br> 2、填写项目选项：<br>    -  Project Name：native_plus<br>    -  Framework：None(Plain C/C++ Library)<br>    -  Type：Dynamic<br> 3、添加 native_plus.cc 文件到项目中。<br> 4、在 Build Settings 中进行以下更改，在对话框中选择 Build 选项卡和 All Configurations ：<br>    - 在 Linking 部分， Other Linker Flags 项中，增加 -undefined dynamic_lookup 。<br>    - 在 Search Paths 部分， Header Search Paths 项中，增加 dart_api.h 文件路径，在文件位于已下载的 SDK 或 Dart 仓库中。<br>    - 在 Preprocessing 部分， Preprocessor Macros 项中，增加 DART_SHARED_LIB=1 。<br> 5、Build。</p>
+</blockquote>
+<h3 id="test-native-plus-dart"><a href="#test-native-plus-dart" class="headerlink" title="test_native_plus.dart"></a>test_native_plus.dart</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;导入本地库，将 Build 生成的 libnative_plus.dylib 放置在同目录下</span><br><span class="line">import &#39;dart-ext:native_plus&#39;;</span><br><span class="line">&#x2F;&#x2F;用 Native 修饰本地库的函数</span><br><span class="line">int nativePlus(int a, int b) native &quot;NativePlus&quot;;</span><br><span class="line">void main() &#123;</span><br><span class="line">  print(nativePlus(3, 5));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>另外还可以使用 [C &amp; C++ interop using FFI] (<a target="_blank" rel="noopener" href="https://dart.dev/server/c-interop">https://dart.dev/server/c-interop</a>) 对已经开发好的 C/C++ 链接库直接调用。</p>
+<h1 id="Tonic"><a href="#Tonic" class="headerlink" title="Tonic"></a>Tonic</h1><p>Dart 对 Native 的支持目前还不是很完善，Flutter 团队目前开发的 Tonic 库很好的去支持 Dart 与 C/C++ 代码的相互调用。Tonic 的代码仓库地址在<a target="_blank" rel="noopener" href="https://fuchsia.googlesource.com/tonic">这里</a>。<br>A collection of C++ utilities for working with the DartVM API. 通过 Tonic 可以完整实现 Dart 与 C++ 之间的代码交互。</p>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>本文详细梳理了 Platform Channel 完整的实现细节，最大的收获是对数据通信整体架构的设计和 Dart 与 C/C++ 之间代码的相互调用实现。行文比较仓促，作为一个 Android Coder ，部分案例也是基于 Android 的角度分析代码，可能对于 iOS 同学有一些不太友好，还望海涵。文中涉及到的任何内容，欢迎大家留言讨论。</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://example.com/2020/12/19/%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86-%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Platform-Channel/" data-id="ckivm36bh000946jg6ime544v" data-title="底层原理 - 深入探索Platform Channel" class="article-share-link">Share</a>
+      
+      
+      
+  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Flutter/" rel="tag">Flutter</a></li></ul>
+
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+  
+    <a href="/2020/12/19/Maven-%E5%85%A5%E9%97%A8%E7%AC%94%E8%AE%B0/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">Maven 入门笔记</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tags</h3>
+    <div class="widget">
+      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/Android/" rel="tag">Android</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Flutter/" rel="tag">Flutter</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Gradle/" rel="tag">Gradle</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Maven/" rel="tag">Maven</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tag Cloud</h3>
+    <div class="widget tagcloud">
+      <a href="/tags/Android/" style="font-size: 20px;">Android</a> <a href="/tags/Flutter/" style="font-size: 20px;">Flutter</a> <a href="/tags/Gradle/" style="font-size: 10px;">Gradle</a> <a href="/tags/Maven/" style="font-size: 10px;">Maven</a>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/12/">December 2020</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recent Posts</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2020/12/19/%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86-%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Platform-Channel/">底层原理 - 深入探索Platform Channel</a>
+          </li>
+        
+          <li>
+            <a href="/2020/12/19/Maven-%E5%85%A5%E9%97%A8%E7%AC%94%E8%AE%B0/">Maven 入门笔记</a>
+          </li>
+        
+          <li>
+            <a href="/2020/12/19/Android-Gradle-Plugin%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/">Android Gradle Plugin源码解析</a>
+          </li>
+        
+          <li>
+            <a href="/2020/12/19/Gson%E5%A2%9E%E9%87%8F%E8%A7%A3%E6%9E%90/">Gson增量解析</a>
+          </li>
+        
+          <li>
+            <a href="/2020/12/19/Flutter%E6%8E%A5%E5%85%A5%E7%8E%B0%E6%9C%89Android%E5%B7%A5%E7%A8%8B%E8%B8%A9%E5%9D%91%E4%B9%8B%E6%97%85/">Flutter接入现有Android工程踩坑之旅</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      
+      &copy; 2020 John Doe<br>
+      Powered by <a href="https://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+
+<script src="/js/jquery-3.4.1.min.js"></script>
+
+
+
+  
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+<script src="/js/script.js"></script>
+
+
+
+
+
+  </div>
+</body>
+</html>

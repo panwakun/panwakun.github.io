@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  
+  <title>Android Gradle Plugin源码解析 | Hexo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="笔者最近在做公司项目的模块化重构，做的过程中一直在思考以下几个问题:  一个apk文件和一个aar文件有什么区别？ 什么样的工程会导出一个apk，什么样的工程可以导出aar? 一个apk的诞生伴随着哪些配置的过程，aar呢？ 他们俩之间可以快速的进行交换吗？  以上的这些疑问都在Google大大给我们开发的两个plugin中得到答案:  com.android.application com.an">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Android Gradle Plugin源码解析">
+<meta property="og:url" content="http://example.com/2020/12/19/Android-Gradle-Plugin%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="笔者最近在做公司项目的模块化重构，做的过程中一直在思考以下几个问题:  一个apk文件和一个aar文件有什么区别？ 什么样的工程会导出一个apk，什么样的工程可以导出aar? 一个apk的诞生伴随着哪些配置的过程，aar呢？ 他们俩之间可以快速的进行交换吗？  以上的这些疑问都在Google大大给我们开发的两个plugin中得到答案:  com.android.application com.an">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://user-gold-cdn.xitu.io/2018/8/29/1658474a322708af?w=934&h=1384&f=jpeg&s=67768">
+<meta property="og:image" content="https://user-gold-cdn.xitu.io/2018/8/29/1658474a34e992ee?w=384&h=310&f=jpeg&s=10951">
+<meta property="article:published_time" content="2020-12-19T11:06:25.000Z">
+<meta property="article:modified_time" content="2020-12-19T11:06:44.221Z">
+<meta property="article:author" content="John Doe">
+<meta property="article:tag" content="Gradle">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://user-gold-cdn.xitu.io/2018/8/29/1658474a322708af?w=934&h=1384&f=jpeg&s=67768">
+  
+    <link rel="alternate" href="/atom.xml" title="Hexo" type="application/atom+xml">
+  
+  
+    <link rel="shortcut icon" href="/favicon.png">
+  
+  
+    
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/typeface-source-code-pro@0.0.71/index.min.css">
+
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+    
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+<meta name="generator" content="Hexo 5.3.0"></head>
+
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">Hexo</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+          <a id="nav-rss-link" class="nav-icon" href="/atom.xml" title="RSS Feed"></a>
+        
+        <a id="nav-search-btn" class="nav-icon" title="Search"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="http://example.com"></form>
+      </div>
+    </div>
+  </div>
+</header>
+
+      <div class="outer">
+        <section id="main"><article id="post-Android-Gradle-Plugin源码解析" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+  <div class="article-meta">
+    <a href="/2020/12/19/Android-Gradle-Plugin%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/" class="article-date">
+  <time class="dt-published" datetime="2020-12-19T11:06:25.000Z" itemprop="datePublished">2020-12-19</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="p-name article-title" itemprop="headline name">
+      Android Gradle Plugin源码解析
+    </h1>
+  
+
+      </header>
+    
+    <div class="e-content article-entry" itemprop="articleBody">
+      
+        <p>笔者最近在做公司项目的模块化重构，做的过程中一直在思考以下几个问题:</p>
+<ul>
+<li>一个apk文件和一个aar文件有什么区别？</li>
+<li>什么样的工程会导出一个apk，什么样的工程可以导出aar?</li>
+<li>一个apk的诞生伴随着哪些配置的过程，aar呢？</li>
+<li>他们俩之间可以快速的进行交换吗？</li>
+</ul>
+<p>以上的这些疑问都在Google大大给我们开发的两个plugin中得到答案:</p>
+<ul>
+<li>com.android.application</li>
+<li>com.android.library</li>
+</ul>
+<p>这是我们开发安卓应用时最常用的两个plugin，作为一个Android开发者，怎么可能不对它的实现不感兴趣呢，所以接下来我将用两到三个博客的内容，谈一谈读Android Gradle Plugin源码的一些心得。今天主要讲一些基础的部分。</p>
+<h1 id="源码下载方式"><a href="#源码下载方式" class="headerlink" title="源码下载方式"></a>源码下载方式</h1><p>Android Gradle Plugin 一个版本的源码大概有30多个G，如果你的磁盘资源充足，可以使用repo的方式下载到本地，下面是2.3.0分支的一个示例:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">$ mkdir gradle_2.3.0</span><br><span class="line">$ cd gradle_2.3.0</span><br><span class="line">$ repo init -u https:&#x2F;&#x2F;android.googlesource.com&#x2F;platform&#x2F;manifest -b gradle_2.3.0</span><br><span class="line">$ repo sync</span><br></pre></td></tr></table></figure>
+<p>如果你没有翻墙的工具，可以使用国内的一些镜像:</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://mirrors.tuna.tsinghua.edu.cn/help/AOSP/">清华大学开源软件镜像站</a></li>
+<li><a target="_blank" rel="noopener" href="https://lug.ustc.edu.cn/wiki/mirrors/help/aosp">中国科技大学开源软件镜像站</a></li>
+</ul>
+<p>repo的初始化可以参照 Google 教程 <a target="_blank" rel="noopener" href="https://source.android.com/source/downloading.html">https://source.android.com/source/downloading.html</a></p>
+<p>下载后的源码用IntelliJ IDEA打开tools的base路径，目录结构如下:<br><img src="https://user-gold-cdn.xitu.io/2018/8/29/1658474a322708af?w=934&h=1384&f=jpeg&s=67768" alt="项目结构"></p>
+<p>主要代码在红框内的三个module中。在看Android Gradle Plugin的源码之前，我们先简单的看一下一个自定义的Gradle Plugin是如何实现的。</p>
+<h1 id="Gradle-plugin简介"><a href="#Gradle-plugin简介" class="headerlink" title="Gradle plugin简介"></a>Gradle plugin简介</h1><p>关于自定义一个 Gradle Plugin 的教程很多，我们简单的做一个说明。使用 gradle init 命令可以在当前目录下新建一个简单的gradle工程，目录结构如下:</p>
+<p><img src="https://user-gold-cdn.xitu.io/2018/8/29/1658474a34e992ee?w=384&h=310&f=jpeg&s=10951" alt="gradle工程"></p>
+<p>这是一个基于Gradle Wrapper的多工程Gradle项目。在settings.gradle中可以配置子项目的路径，像我们在Android项目中经常配置的：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">include &#39;:app&#39;</span><br><span class="line">include &#39;:lib&#39;</span><br></pre></td></tr></table></figure>
+<p>说到这里可以多说一句在模块化开发中的经验，我们可以通过指定subproject的路径的方式，可以将本地任何路径下的代码导入工程中来，方便我们进行本地调试:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">include &#39;:lib&#39;</span><br><span class="line">project(&#39;:lib&#39;).projectDir &#x3D; new File(&#39;xx&#x2F;xx&#x2F;xx&#x2F;lib&#39;)</span><br></pre></td></tr></table></figure>
+<p>在rootproject的build.gradle文件中创建一个最简单的gradle plugin:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">class GreetingPluginExtension &#123;</span><br><span class="line">    String message</span><br><span class="line">    String greeter</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">class GreetingPlugin implements Plugin&lt;Project&gt; &#123;</span><br><span class="line">    void apply(Project project) &#123;</span><br><span class="line">        def extension &#x3D; project.extensions.create(&#39;greeting&#39;, GreetingPluginExtension)</span><br><span class="line">        project.task(&#39;hello&#39;) &#123;</span><br><span class="line">            doLast &#123;</span><br><span class="line">                println &quot;$&#123;extension.message&#125; from $&#123;extension.greeter&#125;&quot;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">apply plugin: GreetingPlugin</span><br><span class="line"></span><br><span class="line">greeting &#123;</span><br><span class="line">    message &#x3D; &#39;Hi&#39;</span><br><span class="line">    greeter &#x3D; &#39;Gradle&#39;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这段代码中，我们定义了一个GreetingPlugin，他新增了一个名为 ‘hello’ 的task，在终端输出一行信息，这个信息可以通过 GreetingPluginExtension 进行配置，我们执行一下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">.&#x2F;gradlew hello</span><br><span class="line">Starting a Gradle Daemon (subsequent builds will be faster)</span><br><span class="line">Parallel execution with configuration on demand is an incubating feature.</span><br><span class="line">:hello</span><br><span class="line">Hi from Gradle</span><br><span class="line"></span><br><span class="line">BUILD SUCCESSFUL</span><br><span class="line"></span><br><span class="line">Total time: 4.0 secs</span><br></pre></td></tr></table></figure>
+<p>其实也可以看出自定义一个plugin主要就是新增 <strong><em>Task</em></strong> 及所需参数进行配置的 <strong><em>Extension</em></strong>。Android Gradle Plugin定义了很多task，其中我们最常用的包括 <strong>clean</strong> <strong>build</strong> <strong>assemble</strong> 等,还有更多这些task运行时依赖的task，涉及到安卓编译打包的各个方面，我们在下一个博客中再具体阐述。今天主要Android Plugin的Extension的部分实现，这也是我们日常配置一个Android工程最主要的工作。</p>
+<h1 id="Extension机制"><a href="#Extension机制" class="headerlink" title="Extension机制"></a>Extension机制</h1><p>如何理解 Gradle 的 Extension，这涉及到Groovy的闭包委托特性。Groovy的闭包有this、owner、delegate三个属性，当你在闭包内调用方法时，由他们来确定使用哪个对象来处理。有关闭包的详情可以查看 <a target="_blank" rel="noopener" href="http://groovy-lang.org/closures.html">Groovy Closures</a>。利用Groovy的闭包委托特性，我们可以简单的实现Extension:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">class Person &#123;</span><br><span class="line">    String personName &#x3D; &#39;李四&#39;  </span><br><span class="line">    int personAge &#x3D; 18</span><br><span class="line">    def printPerson()&#123;</span><br><span class="line">        println &quot;name is $&#123;personName&#125;,age is $&#123;personAge&#125;&quot;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line">def person(Closure&lt;Person&gt; closure)&#123;</span><br><span class="line">    Person p &#x3D; new Person();</span><br><span class="line">    closure.delegate &#x3D; p    &#x2F;&#x2F;委托模式优先</span><br><span class="line">    closure.setResolveStrategy(Closure.DELEGATE_FIRST);</span><br><span class="line">    return closure</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">def closure &#x3D; person &#123;</span><br><span class="line">    personName &#x3D; &#39;张三&#39;</span><br><span class="line">    personAge &#x3D; 20</span><br><span class="line">    printPerson()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">task configClosure &#123;</span><br><span class="line">    doLast &#123;</span><br><span class="line">        closure()</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>首先我们定义一个Person对象，然后定义一个person的方法，它接受一个闭包作为参数，修改闭包委托模式优先，执行person方法，定义一个task执行这个闭包，运行结果如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;gradlew configClosure</span><br><span class="line">Parallel execution with configuration on demand is an incubating feature.</span><br><span class="line">:configClosure</span><br><span class="line">name is 张三,age is 20</span><br><span class="line"></span><br><span class="line">BUILD SUCCESSFUL</span><br><span class="line"></span><br><span class="line">Total time: 0.981 secs</span><br></pre></td></tr></table></figure>
+<p>Gradle中大量使用了Extension这一特性，引用gradle一句原话：</p>
+<blockquote>
+<p>Many Gradle objects are extension aware. This includes; projects, tasks, configurations, dependencies etc.</p>
+</blockquote>
+<p>安卓插件使用的Extension都继承自BaseExtension:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">* &lt;ul&gt;</span><br><span class="line">* &lt;li&gt;Plugin &lt;code&gt;com.android.application&lt;&#x2F;code&gt; uses &#123;@link AppExtension&#125;</span><br><span class="line">* &lt;li&gt;Plugin &lt;code&gt;com.android.library&lt;&#x2F;code&gt; uses &#123;@link LibraryExtension&#125;</span><br><span class="line">* &lt;li&gt;Plugin &lt;code&gt;com.android.test&lt;&#x2F;code&gt; uses &#123;@link TestExtension&#125;</span><br><span class="line">* &lt;li&gt;Plugin &lt;code&gt;com.android.atom&lt;&#x2F;code&gt; uses &#123;@link AtomExtension&#125;</span><br><span class="line">* &lt;li&gt;Plugin &lt;code&gt;com.android.instantapp&lt;&#x2F;code&gt; uses &#123;@link InstantAppExtension&#125;</span><br><span class="line">* &lt;&#x2F;ul&gt;</span><br></pre></td></tr></table></figure>
+<p>com.android.application插件使用的是AppExtension，com.android.library插件使用的是LibraryExtension。下面分别讲一下两个Extension的详细配置。</p>
+<h1 id="AppExtension"><a href="#AppExtension" class="headerlink" title="AppExtension"></a>AppExtension</h1><p>以下是AppExtension的所有配置，我按照使用频率进行一个简单的介绍，第一行是官方对于属性的介绍，我会针对每个属性做一些使用上的说明。</p>
+<h3 id="applicationVariants"><a href="#applicationVariants" class="headerlink" title="applicationVariants"></a>applicationVariants</h3><p>The list of Application variants. Since the collections is built after evaluation, it should be used with Gradle’s all iterator to process future items.</p>
+<p>applicationVariants是AppExtension继承自BaseExtension唯一拓展的成员变量，它的参数类型是DefaultDomainObjectSet<ApplicationVariant>，这是不同buildType及Flavor的集合，<br>applicationVariants最常用的是它的all方法，例如一个简单的修改apk名字的代码：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">def buildTime() &#123;</span><br><span class="line">    return new Date().format(&quot;yyyy-MM-dd&quot;, TimeZone.getTimeZone(&quot;UTC&quot;))</span><br><span class="line">&#125;</span><br><span class="line">android &#123;</span><br><span class="line">	applicationVariants.all &#123; variant -&gt;</span><br><span class="line">		variant.outputs.each &#123; output -&gt;</span><br><span class="line">			def outputFile &#x3D; output.outputFile</span><br><span class="line">			if (outputFile !&#x3D; null &amp;&amp; outputFile.name.endsWith(&#39;.apk&#39;)) &#123;</span><br><span class="line">				def fileName &#x3D; &quot;$&#123;variant.buildType.name&#125;-$&#123;variant.versionName&#125;-$&#123;buildTime()&#125;.apk&quot;</span><br><span class="line">				output.outputFile &#x3D; new File(output.outputFile.parent,fileName)</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="buildToolsVersion"><a href="#buildToolsVersion" class="headerlink" title="buildToolsVersion"></a>buildToolsVersion</h3><p>Required. Version of the build tools to use.</p>
+<h3 id="defaultConfig"><a href="#defaultConfig" class="headerlink" title="defaultConfig"></a>defaultConfig</h3><p>Default config, shared by all flavors.</p>
+<p>所有Flavor的默认设置，它是一个 ProductFlavor 对象，可以做以下设置：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br></pre></td><td class="code"><pre><span class="line">defaultConfig &#123;</span><br><span class="line">	applicationId	 &#39;**.**.**&#39; &#x2F;&#x2F;The application ID.</span><br><span class="line">	</span><br><span class="line">	applicationIdSuffix &#39;.two&#39; &#x2F;&#x2F;applicationId的后缀，可以用在想同时安装运行两个Flavor包的时候，比如同时安装debug包和Release包做一些对比。</span><br><span class="line"></span><br><span class="line">    minSdkVersion 14</span><br><span class="line"></span><br><span class="line">    targetSdkVersion 25</span><br><span class="line"></span><br><span class="line">    versionCode  1</span><br><span class="line"></span><br><span class="line">    versionName &quot;1.0&quot;</span><br><span class="line"></span><br><span class="line">    versionNameSuffix &quot;.0&quot;  &#x2F;&#x2F; versionName后缀</span><br><span class="line">	</span><br><span class="line">	consumerProguardFiles &#39;proguard-rules.pro&#39; &#x2F;&#x2F;用于Library中，可以将混淆文件输出到aar中，供Application混淆时使用。</span><br><span class="line">	</span><br><span class="line">	dimension &#39;api&#39; &#x2F;&#x2F;给渠道一个分组加维度的概念，比如你现在有三个渠道包，分成免费和收费两种类型，可以添加一个dimension, 打渠道包的时候会自动打出6个包，而不需要添加6个渠道，详细的说明可见 https:&#x2F;&#x2F;developer.android.com&#x2F;studio&#x2F;build&#x2F;build-variants.html#flavor-dimensions。</span><br><span class="line">	                     </span><br><span class="line">	externalNativeBuild &#123;   &#x2F;&#x2F;ndk的配置，AS2.2之后推荐切换到cmake的方式进行编译。</span><br><span class="line">        cmake &#123;</span><br><span class="line">        	  cppFlags &quot;-frtti -fexceptions&quot;</span><br><span class="line">              arguments &quot;-DANDROID_ARM_NEON&#x3D;TRUE&quot;</span><br><span class="line">        	  buildStagingDirectory &quot;.&#x2F;outputs&#x2F;cmake&quot;</span><br><span class="line">            path &quot;CMakeLists.txt&quot;</span><br><span class="line">            version &quot;3.7.1&quot;</span><br><span class="line">        &#125;</span><br><span class="line">        ndkBuild &#123;</span><br><span class="line">            path &quot;Android.mk&quot;</span><br><span class="line">            buildStagingDirectory &quot;.&#x2F;outputs&#x2F;ndk-build&quot;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    javaCompileOptions &#123;</span><br><span class="line">            annotationProcessorOptions &#123;    &#x2F;&#x2F;注解的配置。</span><br><span class="line">                includeCompileClasspath true &#x2F;&#x2F;需要使用注解功能。</span><br><span class="line">                arguments &#x3D; [ eventBusIndex : &#39;org.greenrobot.eventbusperf.MyEventBusIndex&#39; ]   &#x2F;&#x2F;AbstractProcessor中可以读取到该参数。</span><br><span class="line">                classNames </span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">    manifestPlaceholders &#x3D; [key:&#39;value&#39;]     &#x2F;&#x2F;manifest占位符 定义参数给manifest调用，如不同的渠道id。</span><br><span class="line">	</span><br><span class="line">    multiDexEnabled true      &#x2F;&#x2F;开启 multiDex</span><br><span class="line"></span><br><span class="line">    multiDexKeepFile  file(&#39;multiDexKeep.txt&#39;)    &#x2F;&#x2F;手动拆包，将具体的类放在主DEX。</span><br><span class="line"></span><br><span class="line">    multiDexKeepProguard   file(&#39;multiDexKeep.pro&#39;)  &#x2F;&#x2F;支持Proguard语法，进行一些模糊匹配。</span><br><span class="line"></span><br><span class="line">    ndk &#123;</span><br><span class="line">        abiFilters &#39;x86&#39;, &#39;x86_64&#39;, &#39;armeabi&#39;   &#x2F;&#x2F;只保留特定的api输出到apk文件中。</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    proguardFiles getDefaultProguardFile(&#39;proguard-android.txt&#39;), &#39;proguard-rules.pro&#39; &#x2F;&#x2F;混淆文件的列表，如默认的android混淆文件及本地proguard文件，</span><br><span class="line">                                                                                      &#x2F;&#x2F;切记不要遗漏android混淆文件，否则会导致一些默认的安卓组件无法找到。</span><br><span class="line"></span><br><span class="line">    signingConfig &#123;</span><br><span class="line">            &#x2F;&#x2F;签名文件的路径</span><br><span class="line">            storeFile file(&#39;debug.keystore&#39;)</span><br><span class="line">            &#x2F;&#x2F;签名文件密码</span><br><span class="line">            storePassword &#39;android&#39;</span><br><span class="line">            &#x2F;&#x2F;别名</span><br><span class="line">            keyAlias &#39;androiddebygkey&#39;</span><br><span class="line">            &#x2F;&#x2F;key的密码</span><br><span class="line">            keyPassword &#39;android&#39;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    buildConfigField(&#39;boolean&#39;,&#39;IS_RELEASE&#39;,&#39;false&#39;)   &#x2F;&#x2F;代码中可以通过BuildConfig.IS_RELEASE 调用。</span><br><span class="line"></span><br><span class="line">    resValue(&#39;string&#39;,&#39;appname&#39;,&#39;demo&#39;)  &#x2F;&#x2F;在res&#x2F;value 中添加&lt;string name&#x3D;&quot;appname&quot; translatable&#x3D;&quot;false&quot;&gt;demo&lt;&#x2F;string&gt;。</span><br><span class="line"></span><br><span class="line">    resConfigs &quot;cn&quot;, &quot;hdpi&quot;  &#x2F;&#x2F;指定特定资源，可以结合productFlavors实现不同渠道的最小的apk包。</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="productFlavors"><a href="#productFlavors" class="headerlink" title="productFlavors"></a>productFlavors</h3><p>All product flavors used by this project.<br>渠道包的列表，可以覆盖defaultConfig的参数配置，形成自己的风味</p>
+<h3 id="flavorDimensionList"><a href="#flavorDimensionList" class="headerlink" title="flavorDimensionList"></a>flavorDimensionList</h3><p>The names of flavor dimensions.<br>添加维度的定义，维度的使用上面defaultConfig已经有说明了。</p>
+<h3 id="resourcePrefix"><a href="#resourcePrefix" class="headerlink" title="resourcePrefix"></a>resourcePrefix</h3><p>A prefix to be used when creating new resources. Used by Android Studio.<br>在模块化开发中比较重要，给每个模块指定一个特定的资源前缀，可以避免多模块使用相同的文件命名后合并冲突，在build.gradle中指定了这个配置后，AS会检查不合法的资源命名并报错。</p>
+<h3 id="buildTypes"><a href="#buildTypes" class="headerlink" title="buildTypes"></a>buildTypes</h3><p>Build types used by this project.</p>
+<p>buildType的列表，默认有release和debug，可以自己自定义不同的buildtype，相应的构建task name是 assemble+buildTypeName, buildType部分配置和defaultConfig相同，不同配置使用说明如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">debug &#123;</span><br><span class="line"></span><br><span class="line">       applicationIdSuffix   &#39;.debug&#39;        &#x2F;&#x2F;同defaultConfig</span><br><span class="line"></span><br><span class="line">       versionNameSuffix &#39;.1&#39;     &#x2F;&#x2F;同defaultConfig</span><br><span class="line"></span><br><span class="line">       debuggable true  &#x2F;&#x2F;生成的apk是否可以调试 debug默认是true   release默认false</span><br><span class="line"></span><br><span class="line">       jniDebuggable true   &#x2F;&#x2F;是否可以调试NDK代码 使用lldb进行c和c++代码调试</span><br><span class="line"></span><br><span class="line">       crunchPngs   true  &#x2F;&#x2F;是否开启png优化，会对png图片做一次最优压缩，影响编译速度，debug默认是false   release默认true</span><br><span class="line"></span><br><span class="line">       embedMicroApp true  &#x2F;&#x2F;Android Wear的支持</span><br><span class="line"></span><br><span class="line">       minifyEnabled  true &#x2F;&#x2F;是否开启混淆</span><br><span class="line"></span><br><span class="line">       renderscriptDebuggable false   &#x2F;&#x2F;是否开启渲染脚本</span><br><span class="line"></span><br><span class="line">       renderscriptOptimLevel 5    &#x2F;&#x2F;渲染脚本等级 默认是5</span><br><span class="line"></span><br><span class="line">       zipAlignEnabled true   &#x2F;&#x2F;是否zip对齐优化 默认就是true app对齐</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+<h3 id="ndkDirectory"><a href="#ndkDirectory" class="headerlink" title="ndkDirectory"></a>ndkDirectory</h3><p>The NDK directory used.<br>NDK路径，也可以在local.properties 中配置 ndk.dir=/Users/xxxx/Library/Android/sdk</p>
+<h3 id="sdkDirectory"><a href="#sdkDirectory" class="headerlink" title="sdkDirectory"></a>sdkDirectory</h3><p>The SDK directory used.<br>同ndkDirectory，目前一般配置在local.properties。</p>
+<h3 id="aaptOptions"><a href="#aaptOptions" class="headerlink" title="aaptOptions"></a>aaptOptions</h3><p>Options for aapt, tool for packaging resources.<br>aapt是一个资源打包工具，可以对资源优化做一些动态配置：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">aaptOptions&#123;</span><br><span class="line">        additionalParameters &#39;--rename-manifest-package&#39;,</span><br><span class="line">                &#39;cct.cn.gradle.lsn13&#39;,&#39;-S&#39;,&#39;src&#x2F;main&#x2F;res2&#39;,&#39;--auto-add-overlay&#39;  &#x2F;&#x2F;aapt执行时的额外参数 </span><br><span class="line"></span><br><span class="line">        cruncherEnabled true    &#x2F;&#x2F;对png进行优化检查</span><br><span class="line"></span><br><span class="line">        ignoreAssets &#39;*.jpg&#39;  &#x2F;&#x2F;对res目录下的资源文件进行排除 把res文件夹下面的所有.jpg格式的文件打包到apk中</span><br><span class="line"></span><br><span class="line">        noCompress &#39;.jpg&#39;   &#x2F;&#x2F;对所有.jpg文件不进行压缩</span><br><span class="line"></span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<h3 id="adbExecutable"><a href="#adbExecutable" class="headerlink" title="adbExecutable"></a>adbExecutable</h3><p>The adb executable from the compile SDK.<br>adb工具的文件路径，可以配置在环境变量中。</p>
+<h3 id="adbOptions"><a href="#adbOptions" class="headerlink" title="adbOptions"></a>adbOptions</h3><p>Adb options.<br>adb命令的一些配置</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">adbOptions   &#123;</span><br><span class="line">    installOptions &#39;-r&#39; &#39;-d&#39;  &#x2F;&#x2F;调用adb install命令时默认传递的参数</span><br><span class="line"></span><br><span class="line">    timeOutInMs 1000   &#x2F;&#x2F;执行adb命令的超时时间</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="compileOptions"><a href="#compileOptions" class="headerlink" title="compileOptions"></a>compileOptions</h3><p>Compile options.<br>编译配置</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">compileOptions&#123;</span><br><span class="line">        encoding &#39;UTF-8&#39;  &#x2F;&#x2F;java源文件的编码格式 默认UTF-8</span><br><span class="line"></span><br><span class="line">       </span><br><span class="line">        incremental true    &#x2F;&#x2F;java编译是否使用gradle新的增量模式 </span><br><span class="line"></span><br><span class="line">        sourceCompatibility JavaVersion.VERSION_1_7    &#x2F;&#x2F;java源文件编译的jdk版本 </span><br><span class="line">        </span><br><span class="line">        targetCompatibility JavaVersion.VERSION_1_7   &#x2F;&#x2F;编译出的class的版本</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<h3 id="dataBinding"><a href="#dataBinding" class="headerlink" title="dataBinding"></a>dataBinding</h3><p>Data Binding options.<br>DataBinding的使用细节可以查看 <a target="_blank" rel="noopener" href="https://developer.android.com/topic/libraries/data-binding/index.html">Google文档</a>,可以在build.gradle中开启DataBinding：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">dataBinding  &#123;</span><br><span class="line">      enabled &#x3D; true   &#x2F;&#x2F;开启databinding</span><br><span class="line">      version &#x3D; &quot;1.0&quot;</span><br><span class="line">      addDefaultAdapters &#x3D; true</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="defaultPublishConfig"><a href="#defaultPublishConfig" class="headerlink" title="defaultPublishConfig"></a>defaultPublishConfig</h3><p>Name of the configuration used to build the default artifact of this project.<br>指定发布的渠道及BuildType类型。在Library中使用，默认Release。</p>
+<h3 id="signingConfigs"><a href="#signingConfigs" class="headerlink" title="signingConfigs"></a>signingConfigs</h3><p>Signing configs used by this project.<br>一个签名配置的列表，可以供不同渠道和buildType使用。</p>
+<h3 id="lintOptions"><a href="#lintOptions" class="headerlink" title="lintOptions"></a>lintOptions</h3><p>Lint options.<br>Lint可以检查出代码中一些不规范的使用，如果想保留一些苟且的代码，可以参考以下配置（简友lyzaijs同学对这一块有详细说明，下面引用自他的博客）：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br></pre></td><td class="code"><pre><span class="line">lintOptions &#123; </span><br><span class="line">        quiet true &#x2F;&#x2F; 设置为 true时lint将不报告分析的进度</span><br><span class="line">       </span><br><span class="line">        abortOnError false    &#x2F;&#x2F; 如果为 true，则当lint发现错误时停止 gradle构建</span><br><span class="line">        </span><br><span class="line">        ignoreWarnings true   &#x2F;&#x2F; 如果为 true，则只报告错误</span><br><span class="line">       </span><br><span class="line">        absolutePaths true   &#x2F;&#x2F; 如果为 true，则当有错误时会显示文件的全路径或绝对路径 </span><br><span class="line">        </span><br><span class="line">        checkAllWarnings true  &#x2F;&#x2F; 如果为 true，则检查所有的问题，包括默认不检查问题</span><br><span class="line">        </span><br><span class="line">        warningsAsErrors true  &#x2F;&#x2F; 如果为 true，则将所有警告视为错误</span><br><span class="line">        </span><br><span class="line">        disable &#39;TypographyFractions&#39;,&#39;TypographyQuotes&#39;  &#x2F;&#x2F; 不检查给定的问题id</span><br><span class="line">       </span><br><span class="line">        enable &#39;RtlHardcoded&#39;,&#39;RtlCompat&#39;, &#39;RtlEnabled&#39;   &#x2F;&#x2F; 检查给定的问题 id</span><br><span class="line">     </span><br><span class="line">        check &#39;NewApi&#39;, &#39;InlinedApi&#39;    &#x2F;&#x2F; * 仅 * 检查给定的问题 id</span><br><span class="line">       </span><br><span class="line">        noLines true  &#x2F;&#x2F; 如果为true，则在错误报告的输出中不包括源代码行</span><br><span class="line">        </span><br><span class="line">        showAll true  &#x2F;&#x2F; 如果为 true，则对一个错误的问题显示它所在的所有地方，而不会截短列表，等等。</span><br><span class="line">        </span><br><span class="line">        lintConfig file(&quot;default-lint.xml&quot;)  &#x2F;&#x2F; 重置 lint 配置（使用默认的严重性等设置）。</span><br><span class="line">       </span><br><span class="line">        textReport true  &#x2F;&#x2F; 如果为 true，生成一个问题的纯文本报告（默认为false）</span><br><span class="line">        </span><br><span class="line">        textOutput &#39;stdout&#39; &#x2F;&#x2F; 配置写入输出结果的位置；它可以是一个文件或 “stdout”（标准输出）</span><br><span class="line">        </span><br><span class="line">        xmlReport false &#x2F;&#x2F; 如果为真，会生成一个XML报告，以给Jenkins之类的使用</span><br><span class="line">       </span><br><span class="line">        xmlOutput file(&quot;lint-report.xml&quot;)  &#x2F;&#x2F; 用于写入报告的文件（如果不指定，默认为lint-results.xml）</span><br><span class="line">        </span><br><span class="line">        htmlReport true &#x2F;&#x2F; 如果为真，会生成一个HTML报告（包括问题的解释，存在此问题的源码，等等）</span><br><span class="line">       </span><br><span class="line">        htmlOutput file(&quot;lint-report.html&quot;)  &#x2F;&#x2F; 写入报告的路径，它是可选的（默认为构建目录下的 lint-results.html ）</span><br><span class="line"></span><br><span class="line">        checkReleaseBuilds true   &#x2F;&#x2F; 设置为 true， 将使所有release 构建都以issus的严重性级别为fatal（severity&#x3D;false）的设置来运行lint，并且，如果发现了致命（fatal）的问题，将会中止构建（由上面提到的 abortOnError 控制.</span><br><span class="line"></span><br><span class="line">        fatal &#39;NewApi&#39;, &#39;InlineApi&#39;  &#x2F;&#x2F;设置给定问题的严重级别（severity）为fatal （这意味着他们将会在release构建的期间检查 （即使 lint 要检查的问题没有包含在代码中)</span><br><span class="line">        </span><br><span class="line">        error &#39;Wakelock&#39;, &#39;TextViewEdits&#39;   &#x2F;&#x2F; 设置给定问题的严重级别为error</span><br><span class="line">        </span><br><span class="line">        warning &#39;ResourceAsColor&#39;   &#x2F;&#x2F; 设置给定问题的严重级别为warning</span><br><span class="line">       </span><br><span class="line">        ignore &#39;TypographyQuotes&#39;    &#x2F;&#x2F; 设置给定问题的严重级别（severity）为ignore （和不检查这个问题一样）</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>###dexOptions<br>Dex options.<br>Android dx工具是将java的classes文件编译为字节码dex文件，工具位于android sdk platform-tools目录，我们在做热修复做差分包的时候可能会用到这个工具，在android打包过程中，dx的可以做以下配置：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">dexOptions &#123;</span><br><span class="line">        additionalParameters &#39;--minimal-main-dex&#39;,&#39;--set-max-idx-number&#x3D;10000&#39;  &#x2F;&#x2F;dx命令附加参数</span><br><span class="line"></span><br><span class="line">        javaMaxHeapSize &#39;2048m&#39;    &#x2F;&#x2F;执行dx时java虚拟机可用的最大内存大小</span><br><span class="line"></span><br><span class="line">        jumboMode true   &#x2F;&#x2F;开启大模式，所有的class打到一个dex中，可以忽略65535方法数的限制，低于14版本不可运行</span><br><span class="line"></span><br><span class="line">        keepRuntimeAnnotatedClasses true &#x2F;&#x2F;在dex中是否保留Runtime注解 默认是true</span><br><span class="line"></span><br><span class="line">        maxProcessCount 4   &#x2F;&#x2F;默认dex中的进程数  默认是4 </span><br><span class="line"></span><br><span class="line">        threadCount 4  &#x2F;&#x2F;默认的线程数</span><br><span class="line"></span><br><span class="line">        preDexLibraries true  &#x2F;&#x2F;对library预编译 提高编译效率 但是clean的时候比较慢  默认开启的</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<h3 id="packagingOptions"><a href="#packagingOptions" class="headerlink" title="packagingOptions"></a>packagingOptions</h3><p>Packaging options.<br>打包配置，尤其是在一些多模块开发工程中，涉及到的一些资源合并取舍的策略：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">packagingOptions   &#123;</span><br><span class="line">       </span><br><span class="line">        pickFirsts &#x3D; [&#39;META-INF&#x2F;LICENSE&#39;]    &#x2F;&#x2F;pickFirsts做用是 当有重复文件时 打包会报错 这样配置会使用第一个匹配的文件打包进入apk</span><br><span class="line"></span><br><span class="line">        merge &#39;META-INF&#x2F;LICENSE&#39;  &#x2F;&#x2F;重复文件会合并打包入apk</span><br><span class="line"></span><br><span class="line">        exclude &#39;META-INF&#x2F;LICENSE&#39;    &#x2F;&#x2F;打包时排除匹配文件</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<h3 id="sourceSets"><a href="#sourceSets" class="headerlink" title="sourceSets"></a>sourceSets</h3><p>All source sets. Note that the Android plugin uses its own implementation of source sets, AndroidSourceSet.An AndroidSourceSet represents a logical group of Java, aidl and RenderScript sources as well as Android and non-Android (Java-style) resources.</p>
+<p>所有Android资源的集合，包括Java代码，aidl以及RenderScript。默认配置如下，有一些自定义路径的情况下需要修改：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">sourceSets&#123;</span><br><span class="line">        main  &#123;</span><br><span class="line">            res.srcDirs &#39;src&#x2F;main&#x2F;res&#39; </span><br><span class="line">            jniLibs.srcDirs &#x3D; [&#39;libs&#39;] </span><br><span class="line">            aidl.srcDirs &#39;src&#x2F;main&#x2F;aidl&#39;</span><br><span class="line">            assets.srcDirs &#39;src&#x2F;main&#x2F;assets&#39;</span><br><span class="line">            java.srcDirs &#39;src&#x2F;main&#x2F;java&#39;</span><br><span class="line">            jni.srcDirs &#39;src&#x2F;main&#x2F;jni&#39;</span><br><span class="line">            renderscript.srcDirs &#39;src&#x2F;main&#x2F;renderscript&#39; </span><br><span class="line">            resources.srcDirs &#39;src&#x2F;main&#x2F;resources&#39;</span><br><span class="line">            manifest.srcFile &#39;src&#x2F;main&#x2F;AndroidManifest.xml&#39;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        free  &#123;   &#x2F;&#x2F;除了main,也可以给不同的渠道指定不同的配置</span><br><span class="line"></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<h3 id="splits"><a href="#splits" class="headerlink" title="splits"></a>splits</h3><p>APK splits options.<br>这个特性非常有用，不过国内应用基本使用不上，可以根据CPU架构和屏幕像素密度打出最小的apk包，再配合Google Play的市场分发机制，让你可以下载到适合你使用的apk。有abi、density、language三个维度进行过滤:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">splits  &#123;</span><br><span class="line">        abi &#123;</span><br><span class="line">            enable true  &#x2F;&#x2F;开启abi分包</span><br><span class="line"></span><br><span class="line">            universalApk true  &#x2F;&#x2F;是否创建一个包含所有有效动态库的apk</span><br><span class="line"></span><br><span class="line">            reset()  &#x2F;&#x2F;清空defaultConfig配置</span><br><span class="line"></span><br><span class="line">            include &#39;x86&#39;,&#39;armeabi&#39; &#x2F;&#x2F;打出包含的包 这个是和defaultConfig累加的</span><br><span class="line"></span><br><span class="line">            exclude &#39;mips&#39;   &#x2F;&#x2F;排除指定的cpu架构</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        density &#123;</span><br><span class="line">            </span><br><span class="line">            enable true  &#x2F;&#x2F;开启density分包</span><br><span class="line"></span><br><span class="line">            reset()  &#x2F;&#x2F;清空所有默认值</span><br><span class="line"></span><br><span class="line">            include &#39;xhdpi&#39;,&#39;xxhdpi&#39;   &#x2F;&#x2F;打出包含的包 这个是和默认值累加的</span><br><span class="line"></span><br><span class="line">            exclude &#39;mdpi&#39; &#x2F;&#x2F;排除指定</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        language &#123;</span><br><span class="line">              enable true  &#x2F;&#x2F;开启language分包</span><br><span class="line">              include &#39;en&#39;,&#39;cn&#39;  &#x2F;&#x2F; 指定语言</span><br><span class="line">        &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="variantFilter"><a href="#variantFilter" class="headerlink" title="variantFilter"></a>variantFilter</h3><p>Callback to control which variants should be excluded.<br>上面我们通过flavor及buildType构建出大量的apk，这里可能有你不需要的，android plugin也考虑到这一点，可以动态设置忽略一些产出：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">variantFilter &#123; variant -&gt;</span><br><span class="line"></span><br><span class="line">        def buildTypeName &#x3D; variant.buildType.name</span><br><span class="line">        def flavorName &#x3D; variant.flavors.name</span><br><span class="line"></span><br><span class="line">        if (flavorName.contains(&quot;360&quot;) &amp;&amp; buildTypeName.contains(&quot;debug&quot;)) &#123;</span><br><span class="line">            &#x2F;&#x2F; Tells Gradle to ignore each variant that satisfies the conditions above.</span><br><span class="line">            setIgnore(true)</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<h1 id="LibraryExtension"><a href="#LibraryExtension" class="headerlink" title="LibraryExtension"></a>LibraryExtension</h1><h3 id="libraryVariants"><a href="#libraryVariants" class="headerlink" title="libraryVariants"></a>libraryVariants</h3><p>The list of library variants. Since the collections is built after evaluation, it should be used with Gradle’s all iterator to process future items.</p>
+<p>libraryVariants也有类似于applicationVariants的all闭包，可以获取到所有的应用回调，其中可以做一些特定的设置：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">android.libraryVariants.all &#123; variant -&gt;</span><br><span class="line">    def mergedFlavor &#x3D; variant.getMergedFlavor()</span><br><span class="line">    &#x2F;&#x2F; Defines the value of a build variable you can use in the manifest.</span><br><span class="line">    mergedFlavor.manifestPlaceholders &#x3D; [hostName:&quot;www.example.com&quot;]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>以上是对AppExtension及LibraryExtension的一个详细说明，这个Android Plugin所有task运行的基础配置，下一节将关注我们常用的task实现以及其中的依赖关系。</p>
+<h1 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h1><p><a target="_blank" rel="noopener" href="http://google.github.io/android-gradle-dsl/current/">http://google.github.io/android-gradle-dsl/current/</a></p>
+<p><a target="_blank" rel="noopener" href="https://docs.gradle.org/current/dsl/">https://docs.gradle.org/current/dsl/</a></p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://example.com/2020/12/19/Android-Gradle-Plugin%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/" data-id="ckivm36bi000a46jg3he3hhlj" data-title="Android Gradle Plugin源码解析" class="article-share-link">Share</a>
+      
+      
+      
+  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Gradle/" rel="tag">Gradle</a></li></ul>
+
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/2020/12/19/Maven-%E5%85%A5%E9%97%A8%E7%AC%94%E8%AE%B0/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          Maven 入门笔记
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2020/12/19/Gson%E5%A2%9E%E9%87%8F%E8%A7%A3%E6%9E%90/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">Gson增量解析</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tags</h3>
+    <div class="widget">
+      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/Android/" rel="tag">Android</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Flutter/" rel="tag">Flutter</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Gradle/" rel="tag">Gradle</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Maven/" rel="tag">Maven</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tag Cloud</h3>
+    <div class="widget tagcloud">
+      <a href="/tags/Android/" style="font-size: 20px;">Android</a> <a href="/tags/Flutter/" style="font-size: 20px;">Flutter</a> <a href="/tags/Gradle/" style="font-size: 10px;">Gradle</a> <a href="/tags/Maven/" style="font-size: 10px;">Maven</a>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/12/">December 2020</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recent Posts</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2020/12/19/%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86-%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Platform-Channel/">底层原理 - 深入探索Platform Channel</a>
+          </li>
+        
+          <li>
+            <a href="/2020/12/19/Maven-%E5%85%A5%E9%97%A8%E7%AC%94%E8%AE%B0/">Maven 入门笔记</a>
+          </li>
+        
+          <li>
+            <a href="/2020/12/19/Android-Gradle-Plugin%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/">Android Gradle Plugin源码解析</a>
+          </li>
+        
+          <li>
+            <a href="/2020/12/19/Gson%E5%A2%9E%E9%87%8F%E8%A7%A3%E6%9E%90/">Gson增量解析</a>
+          </li>
+        
+          <li>
+            <a href="/2020/12/19/Flutter%E6%8E%A5%E5%85%A5%E7%8E%B0%E6%9C%89Android%E5%B7%A5%E7%A8%8B%E8%B8%A9%E5%9D%91%E4%B9%8B%E6%97%85/">Flutter接入现有Android工程踩坑之旅</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      
+      &copy; 2020 John Doe<br>
+      Powered by <a href="https://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+
+<script src="/js/jquery-3.4.1.min.js"></script>
+
+
+
+  
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+<script src="/js/script.js"></script>
+
+
+
+
+
+  </div>
+</body>
+</html>

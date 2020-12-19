@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  
+  <title>Gson增量解析 | Hexo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="增量解析是我自己杜撰的一个名词，主要是有这样的场景，移动端请求服务端json数据的时候，考虑到流量资源的珍贵，如果本地已经请求过完整下信息，一般是将一个model更新的字段下发，而不是每次都下发完整的model。举个例子，我们向服务器请求user的信息，完整的数据格式可能是：  {“age”:20,”id”:1,”name”:”张三”,”sex”:”男”}  User中的id、name、sex可能">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Gson增量解析">
+<meta property="og:url" content="http://example.com/2020/12/19/Gson%E5%A2%9E%E9%87%8F%E8%A7%A3%E6%9E%90/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="增量解析是我自己杜撰的一个名词，主要是有这样的场景，移动端请求服务端json数据的时候，考虑到流量资源的珍贵，如果本地已经请求过完整下信息，一般是将一个model更新的字段下发，而不是每次都下发完整的model。举个例子，我们向服务器请求user的信息，完整的数据格式可能是：  {“age”:20,”id”:1,”name”:”张三”,”sex”:”男”}  User中的id、name、sex可能">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2020-12-19T11:05:15.000Z">
+<meta property="article:modified_time" content="2020-12-19T11:05:48.593Z">
+<meta property="article:author" content="John Doe">
+<meta property="article:tag" content="Android">
+<meta name="twitter:card" content="summary">
+  
+    <link rel="alternate" href="/atom.xml" title="Hexo" type="application/atom+xml">
+  
+  
+    <link rel="shortcut icon" href="/favicon.png">
+  
+  
+    
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/typeface-source-code-pro@0.0.71/index.min.css">
+
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+    
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+<meta name="generator" content="Hexo 5.3.0"></head>
+
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">Hexo</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+          <a id="nav-rss-link" class="nav-icon" href="/atom.xml" title="RSS Feed"></a>
+        
+        <a id="nav-search-btn" class="nav-icon" title="Search"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="http://example.com"></form>
+      </div>
+    </div>
+  </div>
+</header>
+
+      <div class="outer">
+        <section id="main"><article id="post-Gson增量解析" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+  <div class="article-meta">
+    <a href="/2020/12/19/Gson%E5%A2%9E%E9%87%8F%E8%A7%A3%E6%9E%90/" class="article-date">
+  <time class="dt-published" datetime="2020-12-19T11:05:15.000Z" itemprop="datePublished">2020-12-19</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="p-name article-title" itemprop="headline name">
+      Gson增量解析
+    </h1>
+  
+
+      </header>
+    
+    <div class="e-content article-entry" itemprop="articleBody">
+      
+        <p>增量解析是我自己杜撰的一个名词，主要是有这样的场景，移动端请求服务端json数据的时候，考虑到流量资源的珍贵，如果本地已经请求过完整下信息，一般是将一个model更新的字段下发，而不是每次都下发完整的model。举个例子，我们向服务器请求user的信息，完整的数据格式可能是：</p>
+<blockquote>
+<p>{“age”:20,”id”:1,”name”:”张三”,”sex”:”男”}</p>
+</blockquote>
+<p>User中的id、name、sex可能是一直不变的，而age是有可能发生变化的，当客户端刷新user的信息时，服务端只下发age的信息就行了，以达到节省流量的目的，下发的数据格式可能是：</p>
+<blockquote>
+<p>{“age”:25,”id”:1}</p>
+</blockquote>
+<p>只有age发生变化，所以只下发了age的信息，id作为识别字段。我们用Gson解析的时候一般是直接调用fromJson函数，这个函数接受两个参数，一个是json字符串，一个是解析的model类。对于这种只有部分数据的json我们如何解析呢，难道重新定义一个SubUser类，处理这种解析然后赋值给User吗，这样做的代价是非常不灵活，更新的字段必须客户端写死，如果下次name或者sex也发生了变化呢，是不是SubUser类就需要修改然后发版？</p>
+<p>能不能有个类似于fromJson的函数，他的第二个参数不再是一个类，而是一个实例，新的json数据只会更新这个实例的某些字段。Gson在解析的时候会调用model的默认构造函数new出一个实例，能不能不让它new而是直接在原有的实例基础上进行解析呢？查看Gson的官方文档，看到可以给Gson注册一个InstanceCreator，它是一个接口，顾名思义它是提供用户一个初始化model的函数：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">public interface InstanceCreator&lt;T&gt; &#123;</span><br><span class="line">  </span><br><span class="line">  public T createInstance(Type type);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这样我们就可以把原来的user作为初始化的实例，实现增量更新的解析。这是对于object的解析，可以这么做。如果是list呢，如何进行增量解析呢，总不能把原来的list作为返回值吧，目前我还没有很好的思路，只是将列表拆分成object分别进行解析。</p>
+<p>下面简单的写一个demo：</p>
+<p>User类：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">public class User&#123;</span><br><span class="line"></span><br><span class="line">    public long id;</span><br><span class="line"></span><br><span class="line">    public String name;</span><br><span class="line"></span><br><span class="line">    public String sex;</span><br><span class="line"></span><br><span class="line">    public int age;</span><br><span class="line"></span><br><span class="line">    public long getId() &#123;</span><br><span class="line">        return id;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>GsonCreatorHelper类：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br></pre></td><td class="code"><pre><span class="line">public class GsonCreatorHelper &#123;</span><br><span class="line"></span><br><span class="line">    public static User fromJson(String json, final User old) &#123;</span><br><span class="line">        try &#123;</span><br><span class="line">            JSONObject object &#x3D; new JSONObject(json);</span><br><span class="line">            long id &#x3D; object.getLong(&quot;id&quot;);</span><br><span class="line">            if (id &#x3D;&#x3D; old.getId()) &#123;</span><br><span class="line">                Gson gson &#x3D; new GsonBuilder().registerTypeAdapter(User.class, new InstanceCreator&lt;User&gt;() &#123;</span><br><span class="line">                    @Override</span><br><span class="line">                    public User createInstance(Type type) &#123;</span><br><span class="line">                        return old;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;).create();</span><br><span class="line">                return gson.fromJson(json, User.class);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; catch (JSONException e) &#123;</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        &#125;</span><br><span class="line">        return new Gson().fromJson(json, User.class);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    public static List&lt;User&gt; fromJson(String json, final List&lt;User&gt; old) &#123;</span><br><span class="line">        try &#123;</span><br><span class="line">            List&lt;User&gt; result &#x3D; new ArrayList&lt;&gt;();</span><br><span class="line">            JSONArray array &#x3D; new JSONArray(json);</span><br><span class="line">            for (int i &#x3D; 0; i &lt; array.length(); i++) &#123;</span><br><span class="line">                JSONObject object &#x3D; array.getJSONObject(i);</span><br><span class="line">                final long id &#x3D; object.getLong(&quot;id&quot;);</span><br><span class="line">                Gson gson &#x3D; new GsonBuilder().registerTypeAdapter(User.class, new InstanceCreator&lt;User&gt;() &#123;</span><br><span class="line">                    @Override</span><br><span class="line">                    public User createInstance(Type type) &#123;</span><br><span class="line">                        return getUserById(old, id);</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;).create();</span><br><span class="line">                result.add(gson.fromJson(object.toString(), User.class));</span><br><span class="line">            &#125;</span><br><span class="line">            return result;</span><br><span class="line">        &#125; catch (JSONException e) &#123;</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        &#125;</span><br><span class="line">        return new Gson().fromJson(json, new TypeToken&lt;List&lt;User&gt;&gt;() &#123;</span><br><span class="line">        &#125;.getType());</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    private static User getUserById(List&lt;User&gt; users, long id) &#123;</span><br><span class="line">        for (User user : users) &#123;</span><br><span class="line">            if (user.getId() &#x3D;&#x3D; id) &#123;</span><br><span class="line">                return user;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        return new User();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>MainActivity测试类：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">public class MainActivity extends AppCompatActivity &#123;</span><br><span class="line"></span><br><span class="line">    @Override</span><br><span class="line">    protected void onCreate(Bundle savedInstanceState) &#123;</span><br><span class="line">        super.onCreate(savedInstanceState);</span><br><span class="line">        setContentView(R.layout.activity_main);</span><br><span class="line"></span><br><span class="line">        String json1 &#x3D; &quot;&#123;\&quot;age\&quot;:20,\&quot;id\&quot;:1,\&quot;name\&quot;:\&quot;张三\&quot;,\&quot;sex\&quot;:\&quot;男\&quot;&#125;&quot;;</span><br><span class="line">        String json2 &#x3D; &quot;&#123;\&quot;age\&quot;:23,\&quot;id\&quot;:1&#125;&quot;;</span><br><span class="line">        String json3 &#x3D; &quot;[&#123;\&quot;age\&quot;:20,\&quot;id\&quot;:1,\&quot;name\&quot;:\&quot;张三\&quot;,\&quot;sex\&quot;:\&quot;男\&quot;&#125;,&#123;\&quot;age\&quot;:23,\&quot;id\&quot;:2,\&quot;name\&quot;:\&quot;李四\&quot;,\&quot;sex\&quot;:\&quot;男\&quot;&#125;]&quot;;</span><br><span class="line">        String json4 &#x3D; &quot;[&#123;\&quot;age\&quot;:23,\&quot;id\&quot;:1&#125;,&#123;\&quot;age\&quot;:33,\&quot;id\&quot;:2&#125;]&quot;;</span><br><span class="line"></span><br><span class="line">        User user1 &#x3D; new Gson().fromJson(json1, User.class);</span><br><span class="line">        Log.e(&quot;user1&quot;, new Gson().toJson(user1));</span><br><span class="line"></span><br><span class="line">        User user2 &#x3D; GsonCreatorHelper.fromJson(json2, user1);</span><br><span class="line">        Log.e(&quot;user2&quot;, new Gson().toJson(user2));</span><br><span class="line"></span><br><span class="line">        List&lt;User&gt; user3 &#x3D; new Gson().fromJson(json3, new TypeToken&lt;ArrayList&lt;User&gt;&gt;() &#123;&#125;.getType());</span><br><span class="line">        Log.e(&quot;user3&quot;, new Gson().toJson(user3));</span><br><span class="line"></span><br><span class="line">        List&lt;User&gt; user4 &#x3D; GsonCreatorHelper.fromJson(json4, user3);</span><br><span class="line">        Log.e(&quot;user4&quot;, new Gson().toJson(user4));</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">10-08 18:18:41.419 28438-28438&#x2F;com.panda.gsoninstancecreatortest E&#x2F;user1: &#123;&quot;age&quot;:20,&quot;id&quot;:1,&quot;name&quot;:&quot;张三&quot;,&quot;sex&quot;:&quot;男&quot;&#125;</span><br><span class="line">10-08 18:18:41.425 28438-28438&#x2F;com.panda.gsoninstancecreatortest E&#x2F;user2: &#123;&quot;age&quot;:23,&quot;id&quot;:1,&quot;name&quot;:&quot;张三&quot;,&quot;sex&quot;:&quot;男&quot;&#125;</span><br><span class="line">10-08 18:18:41.436 28438-28438&#x2F;com.panda.gsoninstancecreatortest E&#x2F;user3: [&#123;&quot;age&quot;:20,&quot;id&quot;:1,&quot;name&quot;:&quot;张三&quot;,&quot;sex&quot;:&quot;男&quot;&#125;,&#123;&quot;age&quot;:23,&quot;id&quot;:2,&quot;name&quot;:&quot;李四&quot;,&quot;sex&quot;:&quot;男&quot;&#125;]</span><br><span class="line">10-08 18:18:41.441 28438-28438&#x2F;com.panda.gsoninstancecreatortest E&#x2F;user4: [&#123;&quot;age&quot;:23,&quot;id&quot;:1,&quot;name&quot;:&quot;张三&quot;,&quot;sex&quot;:&quot;男&quot;&#125;,&#123;&quot;age&quot;:33,&quot;id&quot;:2,&quot;name&quot;:&quot;李四&quot;,&quot;sex&quot;:&quot;男&quot;&#125;]</span><br></pre></td></tr></table></figure>
+<p>从结果中我们可以看到user2和user4都是在user1和user3的基础上继续解析了新的json数据。大功告成！</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://example.com/2020/12/19/Gson%E5%A2%9E%E9%87%8F%E8%A7%A3%E6%9E%90/" data-id="ckivm36bb000146jghulxad7d" data-title="Gson增量解析" class="article-share-link">Share</a>
+      
+      
+      
+  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Android/" rel="tag">Android</a></li></ul>
+
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/2020/12/19/Android-Gradle-Plugin%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          Android Gradle Plugin源码解析
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2020/12/19/Flutter%E6%8E%A5%E5%85%A5%E7%8E%B0%E6%9C%89Android%E5%B7%A5%E7%A8%8B%E8%B8%A9%E5%9D%91%E4%B9%8B%E6%97%85/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">Flutter接入现有Android工程踩坑之旅</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tags</h3>
+    <div class="widget">
+      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/Android/" rel="tag">Android</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Flutter/" rel="tag">Flutter</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Gradle/" rel="tag">Gradle</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Maven/" rel="tag">Maven</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tag Cloud</h3>
+    <div class="widget tagcloud">
+      <a href="/tags/Android/" style="font-size: 20px;">Android</a> <a href="/tags/Flutter/" style="font-size: 20px;">Flutter</a> <a href="/tags/Gradle/" style="font-size: 10px;">Gradle</a> <a href="/tags/Maven/" style="font-size: 10px;">Maven</a>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/12/">December 2020</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recent Posts</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2020/12/19/%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86-%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Platform-Channel/">底层原理 - 深入探索Platform Channel</a>
+          </li>
+        
+          <li>
+            <a href="/2020/12/19/Maven-%E5%85%A5%E9%97%A8%E7%AC%94%E8%AE%B0/">Maven 入门笔记</a>
+          </li>
+        
+          <li>
+            <a href="/2020/12/19/Android-Gradle-Plugin%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/">Android Gradle Plugin源码解析</a>
+          </li>
+        
+          <li>
+            <a href="/2020/12/19/Gson%E5%A2%9E%E9%87%8F%E8%A7%A3%E6%9E%90/">Gson增量解析</a>
+          </li>
+        
+          <li>
+            <a href="/2020/12/19/Flutter%E6%8E%A5%E5%85%A5%E7%8E%B0%E6%9C%89Android%E5%B7%A5%E7%A8%8B%E8%B8%A9%E5%9D%91%E4%B9%8B%E6%97%85/">Flutter接入现有Android工程踩坑之旅</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      
+      &copy; 2020 John Doe<br>
+      Powered by <a href="https://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+
+<script src="/js/jquery-3.4.1.min.js"></script>
+
+
+
+  
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+<script src="/js/script.js"></script>
+
+
+
+
+
+  </div>
+</body>
+</html>
